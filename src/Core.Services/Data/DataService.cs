@@ -117,13 +117,28 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         if (tags != null && tags.Count > 0)
             tagsToAdd = await db.Tags.Where(t => tags.Contains(t.Name)).ToListAsync();
 
+        var initValue = string.IsNullOrWhiteSpace(def.InitialValue) ? (values ?? new List<string>()) : [def.InitialValue];
+
+        if (def.PathForConnected != null && def.ConnectionType != null)
+        {
+            if (def.ConnectionType == ConnectionType.Replicated)
+            {
+                initValue = GetLinkedObject(db, def.PathForConnected, def?.Name ?? null, dataSet?.Name ?? null).Values;
+            }
+            else if (def.ConnectionType == ConnectionType.Fulllink && values != null)
+            {
+                var linked = GetLinkedObject(db, def.PathForConnected, def?.Name ?? null, dataSet?.Name ?? null);
+                await UpdateDataEntryAsync(linked.Id, values); //TODO: Testing
+            }
+        }
+
         var entry = new DataEntry
         {
             Case = dataCase,
             DataDefinition = def,
             DataSet = dataSet,
             Tags = tagsToAdd,
-            Values = string.IsNullOrWhiteSpace(def.InitialValue) ? (values ?? throw new Exception("Value is not allowed to be null")) : [def.InitialValue]
+            Values = initValue
         };
 
         if (!def.IsValid)
@@ -142,7 +157,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         return parsed;
     }
 
-    public async Task<object> UpdateDataEntryAsync(long entryId, List<string> values, List<string>? tags = null, string? dataSetName = null)
+    public async Task<object> UpdateDataEntryAsync(long entryId, List<string> values, List<string>? tags = null, string? dataSetName = null) //TODO: Refactor for linking
     {
         await using var db = await _dbContextFactory.CreateDbContextAsync();
 
@@ -198,19 +213,41 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
 
     private object HandleConnected(ApplicationDbContext db, DataEntry entry)
     {
-        var path = entry.DataDefinition.PathForConnected!.Split('.');
-        var linked = db.DataEntries.Include(e => e.DataDefinition).Include(e => e.Tags).Include(e => e.DataSet).Where(e => e.Case.Name == path[0] && e.DataDefinition.Name == path[1]).ToList();
+        if (entry.DataDefinition.PathForConnected == null)
+            throw new Exception("Valuetype is connected, but PathForConnected is missing!");
+
+        if (entry.DataDefinition.ConnectionType != null && (entry.DataDefinition.ConnectionType == ConnectionType.Readonly || entry.DataDefinition.ConnectionType == ConnectionType.Fulllink))
+        {
+            return ParseValueInRightObject(GetLinkedObject(db, entry.DataDefinition.PathForConnected, entry?.DataDefinition?.Name ?? null, entry?.DataSet?.Name ?? null));
+        }
+        else if (entry.DataDefinition.ConnectionType != null && entry.DataDefinition.ConnectionType == ConnectionType.Replicated)
+        {
+            return ParseValueInRightObject(entry);
+        }
+        
+        throw new InvalidOperationException("Either ConnectionType was empty or couldn't be found!");
+    }
+
+    private DataEntry GetLinkedObject(ApplicationDbContext db, string pathForConnected, string? dataDefinitionName = null, string? dataSetName = null)
+    {
+        var path = pathForConnected!.Split('.');
+        if (path[1] == "{name}")
+            path[1] = dataDefinitionName ?? throw new Exception("DataDefinition name couldn't be found!");
+        if (path[2] == "{name}")
+            path[2] = dataSetName ?? throw new Exception("DataSet name couldn't be found!");
+
+        var linked = db.DataEntries.Include(e => e.DataDefinition).Include(e => e.Tags).Include(e => e.DataSet).Where(e => e.Case.Name == path[0] && e.DataDefinition.Name == path[1] && e.DataSet!.Name == path[2]).ToList();
 
         if (linked.Count > 1)
             throw new InvalidOperationException("Too many linked entries were found.");
         if (!linked.Any())
-            throw new InvalidOperationException($"Link '{entry.DataDefinition.PathForConnected}' not found.");
+            throw new InvalidOperationException($"Link '{pathForConnected}' not found.");
 
         var target = linked.First();
         if (!target.DataDefinition.IsValid)
-            throw new InvalidOperationException($"Linked entry '{entry.DataDefinition.PathForConnected}' is invalid.");
+            throw new InvalidOperationException($"Linked entry '{pathForConnected}' is invalid.");
 
-        return ParseValueInRightObject(target);
+        return target;
     }
 
     private object ParseValueInRightObject(DataEntry entry) => entry.DataDefinition.MultipleValues ? entry.Values : entry.Values.FirstOrDefault()!;
