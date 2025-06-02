@@ -2,6 +2,8 @@
 using Core.Models.Data;
 using Core.Services.Action;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
+using DataSet = Core.Models.Data.DataSet;
 using ValueType = Core.Models.Data.ValueType;
 
 namespace Core.Services.Data;
@@ -128,7 +130,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
             else if (def.ConnectionType == ConnectionType.Fulllink && values != null)
             {
                 var linked = GetLinkedObject(db, def.PathForConnected, def?.Name ?? null, dataSet?.Name ?? null);
-                await UpdateDataEntryAsync(linked.Id, values); //TODO: Testing
+                await UpdateDataEntryAsync(linked.Id, values);
             }
         }
 
@@ -157,7 +159,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         return parsed;
     }
 
-    public async Task<object> UpdateDataEntryAsync(long entryId, List<string> values, List<string>? tags = null, string? dataSetName = null) //TODO: Refactor for linking
+    public async Task<object> UpdateDataEntryAsync(long entryId, List<string> values, List<string>? tags = null, string? dataSetName = null)
     {
         await using var db = await _dbContextFactory.CreateDbContextAsync();
 
@@ -172,6 +174,9 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
             entry.Tags = newTags;
         }
 
+        if (def.ReadOnly)
+            throw new Exception("The entry can't be changed as it is readonly.");
+
         if (!string.IsNullOrWhiteSpace(dataSetName))
             entry.DataSet = await db.DataSets.SingleAsync(ds => ds.Name == dataSetName);
 
@@ -180,6 +185,12 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
 
         if (!entry.IsValid)
             throw new InvalidOperationException("At least one tag or one dataset must be provided");
+
+        if (def.PathForConnected != null && def.ConnectionType == ConnectionType.Fulllink)
+        {
+            var linked = GetLinkedObject(db, def.PathForConnected, def?.Name ?? null, entry?.DataSet?.Name ?? null);
+            await UpdateDataEntryAsync(linked.Id, values);
+        }
 
         await db.SaveChangesAsync();
 
@@ -239,7 +250,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         var linked = db.DataEntries.Include(e => e.DataDefinition).Include(e => e.Tags).Include(e => e.DataSet).Where(e => e.Case.Name == path[0] && e.DataDefinition.Name == path[1] && e.DataSet!.Name == path[2]).ToList();
 
         if (linked.Count > 1)
-            throw new InvalidOperationException("Too many linked entries were found.");
+            throw new InvalidOperationException("Too many linked entries were found.");      
         if (!linked.Any())
             throw new InvalidOperationException($"Link '{pathForConnected}' not found.");
 

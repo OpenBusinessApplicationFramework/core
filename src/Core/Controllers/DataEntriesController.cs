@@ -1,5 +1,6 @@
 ﻿using Core.Db;
 using Core.Services.Data;
+using Humanizer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,11 +18,21 @@ public class DataEntriesController(DataService _dataService, IDbContextFactory<A
         return Ok(entries.Select(x => new { x.Id, x.CaseId, x.DataDefinitionId, x.DataSetId, DataDefinitionName = x.DataDefinition.Name, DataSetName = x?.DataSet?.Name ?? null, TagsNames = x.Tags.Any() ? string.Join(", ", x.Tags.Select(x => x.Name)) : null, x.DataDefinition.MultipleValues, x.Value, x.Values, x.IsValid }));
     }
 
-    [HttpPost("{caseName}/{definitionName}")]
+    [HttpPost("{caseName}/single/{definitionName}")]
     public async Task<ActionResult<object>> CreateEntryAsync([FromRoute] string caseName, [FromRoute] string definitionName, [FromBody] CreateEntryDto dto)
     {
         var created = await _dataService.CreateDataEntryAsync(caseName, definitionName, dto.Values, dto.Tags, dto.DataSetName);
 
+        return NoContent();
+    }
+
+    [HttpPost("{caseName}/multiple")]
+    public async Task<ActionResult<object>> CreateMultipleEntriesAsync([FromRoute] string caseName, [FromBody] List<CreateMultipleEntriesDto> dtos)
+    {
+        foreach (var dto in dtos)
+        {
+            var created = await _dataService.CreateDataEntryAsync(caseName, dto.DefinitionName, dto.Values, dto.Tags, dto.DataSetName);
+        }
         return NoContent();
     }
 
@@ -41,6 +52,12 @@ public class DataEntriesController(DataService _dataService, IDbContextFactory<A
     }
 
     // DTO-Klassen für Einträge
+
+    public class CreateMultipleEntriesDto : CreateEntryDto
+    {
+        public string DefinitionName { get; set; }
+    }
+
     public class CreateEntryDto
     {
         public List<string> Values { get; set; } = new();

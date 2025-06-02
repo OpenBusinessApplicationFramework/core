@@ -30,10 +30,10 @@ public class ApplicationDbContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Case>().HasIndex(e => e.Name).IsUnique();
-        modelBuilder.Entity<DataDefinition>().HasIndex(e => e.Name).IsUnique();
-        modelBuilder.Entity<Tag>().HasIndex(e => e.Name).IsUnique();
-        modelBuilder.Entity<Models.Data.DataSet>().HasIndex(e => e.Name).IsUnique();
-        modelBuilder.Entity<ActionDefinition>().HasIndex(e => e.Name).IsUnique();
+        modelBuilder.Entity<DataDefinition>().HasIndex(e => new { e.CaseId, e.Name }).IsUnique();
+        modelBuilder.Entity<Tag>().HasIndex(e => new { e.CaseId, e.Name }).IsUnique();
+        modelBuilder.Entity<Models.Data.DataSet>().HasIndex(e => new { e.CaseId, e.Name }).IsUnique();
+        modelBuilder.Entity<ActionDefinition>().HasIndex(e => new { e.CaseId, e.Name }).IsUnique();
 
         modelBuilder.Entity<DataEntry>().HasIndex(e => new { e.DataDefinitionId, e.DataSetId, e.CaseId }).IsUnique();
 
