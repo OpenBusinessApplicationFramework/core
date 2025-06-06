@@ -1,6 +1,7 @@
 ﻿using Core.Db;
 using Core.Models.Data;
 using Core.Services.Data;
+using Core.Utils.Transactions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
 using Microsoft.EntityFrameworkCore;
@@ -51,7 +52,11 @@ public class DataDefinitionsController(DataService _dataService, IDbContextFacto
             PathForConnected = pathForConnected
         };
 
-        var created = await _dataService.CreateDataDefinitionAsync(caseName, definition);
+        await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
+        {
+            await _dataService.CreateDataDefinitionAsync(caseName, definition);
+        });
+
         return NoContent();
     }
 
@@ -83,14 +88,22 @@ public class DataDefinitionsController(DataService _dataService, IDbContextFacto
             PathForConnected = pathForConnected
         };
 
-        var result = await _dataService.UpdateDataDefinitionAsync(caseName, definition);
+        await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
+        {
+            await _dataService.UpdateDataDefinitionAsync(caseName, definition);
+        });
+
         return NoContent();
     }
 
     [HttpDelete("{caseName}/{definitionId:long}")]
     public async Task<IActionResult> DeleteAsync([FromRoute] string caseName, [FromRoute] long definitionId)
     {
-        await _dataService.DeleteDataDefinitionAsync(caseName, definitionId);
+        await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
+        {
+            await _dataService.DeleteDataDefinitionAsync(caseName, definitionId);
+        });
+        
         return NoContent();
     }
 }

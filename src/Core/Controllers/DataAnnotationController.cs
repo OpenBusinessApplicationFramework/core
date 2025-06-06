@@ -1,6 +1,7 @@
 ﻿using Core.Db;
 using Core.Models.Data;
 using Core.Services.Data;
+using Core.Utils.Transactions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
 using Microsoft.EntityFrameworkCore;
@@ -35,7 +36,11 @@ public class DataAnnotationController(DataAnnotationService _dataAnnotationServi
             Description = description
         };
 
-        var created = await _dataAnnotationService.CreateDataSetAsync(caseName, dataSet);
+        await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
+        {
+            await _dataAnnotationService.CreateDataSetAsync(caseName, dataSet);
+        });
+        
         return NoContent();
     }
 
@@ -50,7 +55,11 @@ public class DataAnnotationController(DataAnnotationService _dataAnnotationServi
             Description = description
         };
 
-        var updated = await _dataAnnotationService.UpdateDataSetAsync(caseName, dataSet);
+        await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
+        {
+            await _dataAnnotationService.UpdateDataSetAsync(caseName, dataSet);
+        });
+
         return NoContent();
     }
 
@@ -78,7 +87,11 @@ public class DataAnnotationController(DataAnnotationService _dataAnnotationServi
             Description = description
         };
 
-        var created = await _dataAnnotationService.CreateTagAsync(caseName, tag);
+        await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
+        {
+            await _dataAnnotationService.CreateTagAsync(caseName, tag);
+        });
+        
         return NoContent();
     }
 
@@ -93,7 +106,11 @@ public class DataAnnotationController(DataAnnotationService _dataAnnotationServi
             Description = description
         };
 
-        var updated = await _dataAnnotationService.UpdateTagAsync(caseName, tag);
+        await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
+        {
+            await _dataAnnotationService.UpdateTagAsync(caseName, tag);
+        });
+
         return NoContent();
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Core.Db;
 using Core.Models.Action;
 using Core.Services.Action;
+using Core.Utils.Transactions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
 using Microsoft.EntityFrameworkCore;
@@ -31,14 +32,22 @@ public class ActionsController(ActionService _actionService, IDbContextFactory<A
         [FromForm] List<string> tagUsedInAction,
         [FromForm] List<string> dataSetUsedInAction)
     {
-        await _actionService.CreateAsync(caseName, name, actionFunction, tagUsedInAction, dataSetUsedInAction);
+        await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
+        {
+            await _actionService.CreateAsync(caseName, name, actionFunction, tagUsedInAction, dataSetUsedInAction);
+        });
+
         return NoContent();
     }
 
     [HttpPost("{caseName}/{actionName}/execute")]
     public async Task<IActionResult> ExecuteActionAsync([FromRoute] string caseName, [FromRoute] string actionName)
     {
-        await _actionService.ExecuteActionAsync(caseName, actionName, null);
+        await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
+        {
+            await _actionService.ExecuteActionAsync(caseName, actionName, null);
+        });
+
         return NoContent();
     }
 
@@ -49,14 +58,22 @@ public class ActionsController(ActionService _actionService, IDbContextFactory<A
         [FromForm] List<string> dataSetUsedInAction,
         [FromForm] string? newName = null)
     {
-        await _actionService.UpdateAsync(caseName, actionName, actionFunction, tagUsedInAction, dataSetUsedInAction, newName);
+        await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
+        {
+            await _actionService.UpdateAsync(caseName, actionName, actionFunction, tagUsedInAction, dataSetUsedInAction, newName);
+        });
+        
         return NoContent();
     }
 
     [HttpDelete("{caseName}/{actionName}")]
     public async Task<ActionResult<ActionDefinition>> DeleteAsync([FromRoute] string caseName, [FromRoute] string actionName)
     {
-        await _actionService.DeleteAsync(caseName, actionName);
+        await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
+        {
+            await _actionService.DeleteAsync(caseName, actionName);
+        });
+        
         return NoContent();
     }
 }

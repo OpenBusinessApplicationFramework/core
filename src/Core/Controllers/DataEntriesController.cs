@@ -1,5 +1,6 @@
 ﻿using Core.Db;
 using Core.Services.Data;
+using Core.Utils.Transactions;
 using Humanizer;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -21,7 +22,10 @@ public class DataEntriesController(DataService _dataService, IDbContextFactory<A
     [HttpPost("{caseName}/single/{definitionName}")]
     public async Task<ActionResult<object>> CreateEntryAsync([FromRoute] string caseName, [FromRoute] string definitionName, [FromBody] CreateEntryDto dto)
     {
-        var created = await _dataService.CreateDataEntryAsync(caseName, definitionName, dto.Values, dto.Tags, dto.DataSetName);
+        await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
+        {
+            await _dataService.CreateDataEntryAsync(caseName, definitionName, dto.Values, dto.Tags, dto.DataSetName);
+        });
 
         return NoContent();
     }
@@ -29,17 +33,24 @@ public class DataEntriesController(DataService _dataService, IDbContextFactory<A
     [HttpPost("{caseName}/multiple")]
     public async Task<ActionResult<object>> CreateMultipleEntriesAsync([FromRoute] string caseName, [FromBody] List<CreateMultipleEntriesDto> dtos)
     {
-        foreach (var dto in dtos)
+        await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
         {
-            var created = await _dataService.CreateDataEntryAsync(caseName, dto.DefinitionName, dto.Values, dto.Tags, dto.DataSetName);
-        }
+            foreach (var dto in dtos)
+            {
+                await _dataService.CreateDataEntryAsync(caseName, dto.DefinitionName, dto.Values, dto.Tags, dto.DataSetName);
+            }
+        });
+
         return NoContent();
     }
 
     [HttpPut("{entryId:long}")]
     public async Task<ActionResult<object>> UpdateEntryAsync([FromRoute] long entryId, [FromBody] UpdateEntryDto dto)
     {
-        var updated = await _dataService.UpdateDataEntryAsync(entryId, dto.Values, dto.Tags, dto.DataSetName);
+        await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
+        {
+            await _dataService.UpdateDataEntryAsync(entryId, dto.Values, dto.Tags, dto.DataSetName);
+        });
 
         return NoContent();
     }
@@ -47,7 +58,11 @@ public class DataEntriesController(DataService _dataService, IDbContextFactory<A
     [HttpDelete("{entryId:long}")]
     public async Task<IActionResult> DeleteEntryAsync([FromRoute] long entryId)
     {
-        await _dataService.DeleteDataEntryAsync(entryId);
+        await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
+        {
+            await _dataService.DeleteDataEntryAsync(entryId);
+        });
+        
         return NoContent();
     }
 
