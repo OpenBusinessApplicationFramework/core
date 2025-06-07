@@ -163,7 +163,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
     {
         await using var db = await _dbContextFactory.CreateDbContextAsync();
 
-        var entry = await db.DataEntries.Include(e => e.DataDefinition).Include(e => e.Tags).Include(e => e.DataSet).Include(e => e.Case).SingleOrDefaultAsync(e => e.Id == entryId) ?? throw new KeyNotFoundException($"DataEntry with id {entryId} not found.");
+        var entry = await db.DataEntries.Include(e => e.DataDefinition).Include(e => e.Tags).Include(e => e.DataSet).Include(e => e.Case).SingleOrDefaultAsync(e => e.Id == entryId) ?? throw new InvalidOperationException($"DataEntry with id {entryId} not found.");
 
         var def = entry.DataDefinition;
         entry.Values = values.ToList();
@@ -205,7 +205,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
     {
         await using var db = await _dbContextFactory.CreateDbContextAsync();
 
-        var entry = await db.DataEntries.FindAsync(entryId) ?? throw new KeyNotFoundException($"DataEntry with id {entryId} not found.");
+        var entry = await db.DataEntries.FindAsync(entryId) ?? throw new InvalidOperationException($"DataEntry with id {entryId} not found.");
 
         db.DataEntries.Remove(entry);
         await db.SaveChangesAsync();

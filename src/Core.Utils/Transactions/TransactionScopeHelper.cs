@@ -13,15 +13,8 @@ public static class TransactionScopeHelper
     {
         using (var scope = new TransactionScope(settings.TransactionScopeOption, new TransactionOptions { IsolationLevel = settings.IsolationLevel, Timeout = settings.Timeout }, settings.TransactionScopeAsyncFlowOption))
         {
-            try
-            {
-                await execute();
-                scope.Complete();
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("Error in transaction: ", ex);
-            }
+            await execute();
+            scope.Complete();
         }
     }
 }

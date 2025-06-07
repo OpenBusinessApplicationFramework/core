@@ -14,10 +14,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers(options =>
 {
     options.Filters.Add<RequireSelectFilter>();
+    options.Filters.Add<GlobalExceptionFilter>();
 })
-.AddOData(options =>
-    options.Select().OrderBy().Filter().SetMaxTop(100)
-)
+.AddOData(options => options.Select().OrderBy().Filter().SetMaxTop(100))
 .AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
