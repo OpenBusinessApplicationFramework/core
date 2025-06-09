@@ -15,7 +15,7 @@ public class RequireSelectFilter : IActionFilter
         isProdEnviroment = false;
 #endif
 
-        if (path.EndsWith("/odata") && !req.Query.ContainsKey("$select") && isProdEnviroment)
+        if ((path.EndsWith("/odata") || path.EndsWith("/inmemoryodata")) && !req.Query.ContainsKey("$select") && isProdEnviroment)
         {
             context.Result = new BadRequestObjectResult(new
             {

@@ -70,18 +70,20 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         await db.SaveChangesAsync();
     }
 
-    public async Task<List<DataEntry>> GetDataEntriesAsync(string caseName, string dataDefinitionName, string[]? tags = null, string[]? dataSetNames = null)
+    public async Task<IList<DataEntry>> GetDataEntriesAsync(ApplicationDbContext db, string caseName, string? dataDefinitionName = null, string[]? tags = null, string[]? dataSetNames = null)
     {
-        await using var db = await _dbContextFactory.CreateDbContextAsync();
-        var query = db.DataEntries.Include(e => e.Case).Include(e => e.DataDefinition).Include(e => e.Tags).Include(e => e.DataSet).Where(e => e.Case.Name == caseName && e.DataDefinition.Name == dataDefinitionName);
+        var query = db.DataEntries.Include(e => e.Case).Include(e => e.DataDefinition).Include(e => e.Tags).Include(e => e.DataSet).Where(e => e.Case.Name == caseName);
 
-        if (tags != null && tags.Length > 0)
+        if (!string.IsNullOrWhiteSpace(dataDefinitionName))
+            query = query.Where(e => e.DataDefinition.Name == dataDefinitionName);
+
+        if (tags?.Length > 0)
             query = query.Where(e => e.Tags.Any(t => tags.Contains(t.Name)));
 
-        if (dataSetNames != null && dataSetNames.Length > 0)
+        if (dataSetNames?.Length > 0)
             query = query.Where(e => dataSetNames.Contains(e.DataSet.Name));
 
-        var results = await query.ToListAsync();
+        var results = query.ToList();
 
         foreach (var result in results)
         {
@@ -92,7 +94,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
             {
                 ValueType.Static => ParseValueInRightObject(result),
                 ValueType.Calculated => await HandleCalculatedAsync(result),
-                ValueType.Connected => HandleConnected(db, result),
+                ValueType.Connected => HandleConnected(await _dbContextFactory.CreateDbContextAsync(), result),
                 _ => throw new InvalidOperationException("Unknown ValueType.")
             };
 

@@ -1,8 +1,9 @@
 ﻿using Core.Db;
+using Core.Models.Data;
 using Core.Services.Data;
 using Core.Utils.Transactions;
-using Humanizer;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.OData.Query;
 using Microsoft.EntityFrameworkCore;
 
 namespace Core.Controllers;
@@ -11,12 +12,14 @@ namespace Core.Controllers;
 [Route("api/[controller]")]
 public class DataEntriesController(DataService _dataService, IDbContextFactory<ApplicationDbContext> _dbContextFactory) : ControllerBase
 {
-    [HttpGet("{caseName}/{definitionName}")]
-    public async Task<ActionResult<IEnumerable<object>>> GetEntriesAsync([FromRoute] string caseName, [FromRoute] string definitionName, [FromQuery] string[]? tags = null, [FromQuery] string[]? dataSetNames = null)
+    [HttpGet("{caseName}/inmemoryodata")]
+    public async Task<ActionResult<IQueryable<DataEntry>>> GetEntriesAsync(ODataQueryOptions<DataEntry> queryOptions, [FromRoute] string caseName, [FromQuery] string? definitionName = null, [FromQuery] string[]? tags = null, [FromQuery] string[]? dataSetNames = null)
     {
-        var entries = await _dataService.GetDataEntriesAsync(caseName, definitionName, tags, dataSetNames);
+        var db = await _dbContextFactory.CreateDbContextAsync();
 
-        return Ok(entries.Select(x => new { x.Id, x.CaseId, x.DataDefinitionId, x.DataSetId, DataDefinitionName = x.DataDefinition.Name, DataSetName = x?.DataSet?.Name ?? null, TagsNames = x.Tags.Any() ? string.Join(", ", x.Tags.Select(x => x.Name)) : null, x.DataDefinition.MultipleValues, x.Value, x.Values, x.IsValid }));
+        var entries = await _dataService.GetDataEntriesAsync(db, caseName, definitionName, tags, dataSetNames);
+
+        return Ok(queryOptions.ApplyTo(entries.AsQueryable()));
     }
 
     [HttpPost("{caseName}/single/{definitionName}")]
@@ -62,7 +65,7 @@ public class DataEntriesController(DataService _dataService, IDbContextFactory<A
         {
             await _dataService.DeleteDataEntryAsync(entryId);
         });
-        
+
         return NoContent();
     }
 
