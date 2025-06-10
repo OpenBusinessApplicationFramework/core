@@ -12,9 +12,8 @@ namespace Core.Controllers;
 [Route("api/[controller]")]
 public class DataDefinitionsController(DataService _dataService, IDbContextFactory<ApplicationDbContext> _dbContextFactory) : ControllerBase
 {
-    [EnableQuery]
     [HttpGet("{caseName}/odata")]
-    public async Task<ActionResult<IQueryable<DataDefinition>>> GetAsync([FromRoute] string caseName)
+    public async Task<ActionResult<IQueryable<DataDefinition>>> GetAsync(ODataQueryOptions<DataDefinition> queryOptions, [FromRoute] string caseName)
     {
         var db = await _dbContextFactory.CreateDbContextAsync();
 
@@ -22,7 +21,7 @@ public class DataDefinitionsController(DataService _dataService, IDbContextFacto
         if (definition == null)
             return NotFound();
 
-        return Ok(definition);
+        return Ok(queryOptions.ApplyTo(definition));
     }
 
     [HttpPost("{caseName}")]

@@ -12,9 +12,8 @@ namespace Core.Controllers;
 [Route("api/[controller]")]
 public class DataAnnotationController(DataAnnotationService _dataAnnotationService, IDbContextFactory<ApplicationDbContext> _dbContextFactory) : ControllerBase
 {
-    [EnableQuery]
     [HttpGet("{caseName}/dataset/odata")]
-    public async Task<ActionResult<IQueryable<DataSet>>> GetDataSetsAsync([FromRoute] string caseName)
+    public async Task<ActionResult<IQueryable<DataSet>>> GetDataSetsAsync(ODataQueryOptions<DataSet> queryOptions, [FromRoute] string caseName)
     {
         var db = await _dbContextFactory.CreateDbContextAsync();
 
@@ -22,7 +21,7 @@ public class DataAnnotationController(DataAnnotationService _dataAnnotationServi
         if (query == null)
             return NotFound();
 
-        return Ok(query);
+        return Ok(queryOptions.ApplyTo(query));
     }
 
     [HttpPost("{caseName}/dataset")]
@@ -63,9 +62,8 @@ public class DataAnnotationController(DataAnnotationService _dataAnnotationServi
         return NoContent();
     }
 
-    [EnableQuery]
     [HttpGet("{caseName}/tag/odata")]
-    public async Task<ActionResult<IQueryable<DataSet>>> GetTagsAsync([FromRoute] string caseName)
+    public async Task<ActionResult<IQueryable<Tag>>> GetTagsAsync(ODataQueryOptions<Tag> queryOptions, [FromRoute] string caseName)
     {
         var db = await _dbContextFactory.CreateDbContextAsync();
 
@@ -73,11 +71,11 @@ public class DataAnnotationController(DataAnnotationService _dataAnnotationServi
         if (query == null)
             return NotFound();
 
-        return Ok(query);
+        return Ok(queryOptions.ApplyTo(query));
     }
 
     [HttpPost("{caseName}/tag")]
-    public async Task<ActionResult<DataSet>> CreateTagAsync([FromRoute] string caseName,
+    public async Task<ActionResult> CreateTagAsync([FromRoute] string caseName,
         [FromForm] string name,
         [FromForm] string description)
     {
@@ -96,7 +94,7 @@ public class DataAnnotationController(DataAnnotationService _dataAnnotationServi
     }
 
     [HttpPut("{caseName}/tag")]
-    public async Task<ActionResult<DataSet>> UpdateTagAsync([FromRoute] string caseName,
+    public async Task<ActionResult> UpdateTagAsync([FromRoute] string caseName,
         [FromForm] string name,
         [FromForm] string description)
     {
