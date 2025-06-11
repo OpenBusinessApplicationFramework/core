@@ -112,14 +112,14 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         await using var db = await _dbContextFactory.CreateDbContextAsync();
 
         var dataCase = await db.Cases.SingleAsync(c => c.Name == caseName);
-        var def = await db.DataDefinitions.SingleAsync(d => d.Name == dataDefinitionName);
+        var def = await db.DataDefinitions.Where(x => x.CaseId == dataCase.Id).SingleAsync(d => d.Name == dataDefinitionName);
         DataSet? dataSet = null;
         if (!string.IsNullOrWhiteSpace(dataSetName))
-            dataSet = await db.DataSets.SingleAsync(ds => ds.Name == dataSetName);
+            dataSet = await db.DataSets.Where(x => x.CaseId == dataCase.Id).SingleAsync(ds => ds.Name == dataSetName);
 
         var tagsToAdd = new List<Tag>();
         if (tags != null && tags.Count > 0)
-            tagsToAdd = await db.Tags.Where(t => tags.Contains(t.Name)).ToListAsync();
+            tagsToAdd = await db.Tags.Where(x => x.CaseId == dataCase.Id).Where(t => tags.Contains(t.Name)).ToListAsync();
 
         var initValue = string.IsNullOrWhiteSpace(def.InitialValue) ? (values ?? new List<string>()) : [def.InitialValue];
 
@@ -132,7 +132,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
             else if (def.ConnectionType == ConnectionType.Fulllink && values != null)
             {
                 var linked = GetLinkedObject(db, def.PathForConnected, def?.Name ?? null, dataSet?.Name ?? null);
-                await UpdateDataEntryAsync(linked.Id, values);
+                await UpdateDataEntryAsync(linked.Case.Name, linked.Id, values);
             }
         }
 
@@ -156,16 +156,16 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
 
         object parsed = ParseValueInRightObject(entry);
         if (def.CalculateType == CalculateType.OnInsert && !string.IsNullOrWhiteSpace(def.ActionForCalculated))
-            await _actionService.ExecuteActionAsync(caseName, def.ActionForCalculated, parsed);
+            await new ActionExecuteService(_dbContextFactory, this).ExecuteActionAsync(caseName, def.ActionForCalculated, parsed);
 
         return parsed;
     }
 
-    public async Task<object> UpdateDataEntryAsync(long entryId, List<string> values, List<string>? tags = null, string? dataSetName = null)
+    public async Task<object> UpdateDataEntryAsync(string caseName, long entryId, List<string> values, List<string>? tags = null, string? dataSetName = null)
     {
         await using var db = await _dbContextFactory.CreateDbContextAsync();
 
-        var entry = await db.DataEntries.Include(e => e.DataDefinition).Include(e => e.Tags).Include(e => e.DataSet).Include(e => e.Case).SingleOrDefaultAsync(e => e.Id == entryId) ?? throw new InvalidOperationException($"DataEntry with id {entryId} not found.");
+        var entry = await db.DataEntries.Include(e => e.DataDefinition).Include(e => e.Tags).Include(e => e.DataSet).Include(e => e.Case).SingleOrDefaultAsync(e => e.Id == entryId && e.Case.Name == caseName) ?? throw new InvalidOperationException($"DataEntry with id {entryId} not found.");
 
         var def = entry.DataDefinition;
         entry.Values = values.ToList();
@@ -180,7 +180,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
             throw new Exception("The entry can't be changed as it is readonly.");
 
         if (!string.IsNullOrWhiteSpace(dataSetName))
-            entry.DataSet = await db.DataSets.SingleAsync(ds => ds.Name == dataSetName);
+            entry.DataSet = await db.DataSets.SingleAsync(ds => ds.Name == dataSetName && ds.Case.Name == caseName);
 
         if (!def.IsValid)
             throw new InvalidOperationException($"DataDefinition '{def.Name}' is not valid.");
@@ -191,14 +191,14 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         if (def.PathForConnected != null && def.ConnectionType == ConnectionType.Fulllink)
         {
             var linked = GetLinkedObject(db, def.PathForConnected, def?.Name ?? null, entry?.DataSet?.Name ?? null);
-            await UpdateDataEntryAsync(linked.Id, values);
+            await UpdateDataEntryAsync(linked.Case.Name, linked.Id, values);
         }
 
         await db.SaveChangesAsync();
 
         object parsed = ParseValueInRightObject(entry);
         if (def.CalculateType == CalculateType.OnInsert && !string.IsNullOrWhiteSpace(def.ActionForCalculated))
-            await _actionService.ExecuteActionAsync(entry.Case.Name, def.ActionForCalculated, parsed);
+            await new ActionExecuteService(_dbContextFactory, this).ExecuteActionAsync(entry.Case.Name, def.ActionForCalculated, parsed);
 
         return parsed;
     }
@@ -219,7 +219,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         var parsed = ParseValueInRightObject(entry);
 
         if (def.CalculateType == CalculateType.OnCall && !string.IsNullOrWhiteSpace(def.ActionForCalculated))
-            await _actionService.ExecuteActionAsync(entry.Case.Name, def.ActionForCalculated, parsed);
+            await new ActionExecuteService(_dbContextFactory, this).ExecuteActionAsync(entry.Case.Name, def.ActionForCalculated, parsed);
 
         return parsed;
     }
@@ -249,7 +249,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         if (path[2] == "{name}")
             path[2] = dataSetName ?? throw new Exception("DataSet name couldn't be found!");
 
-        var linked = db.DataEntries.Include(e => e.DataDefinition).Include(e => e.Tags).Include(e => e.DataSet).Where(e => e.Case.Name == path[0] && e.DataDefinition.Name == path[1] && e.DataSet!.Name == path[2]).ToList();
+        var linked = db.DataEntries.Include(e => e.Case).Include(e => e.DataDefinition).Include(e => e.Tags).Include(e => e.DataSet).Where(e => e.Case.Name == path[0] && e.DataDefinition.Name == path[1] && e.DataSet!.Name == path[2]).ToList();
 
         if (linked.Count > 1)
             throw new InvalidOperationException("Too many linked entries were found.");      

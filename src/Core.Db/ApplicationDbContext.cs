@@ -37,6 +37,8 @@ public class ApplicationDbContext : DbContext
 
         modelBuilder.Entity<DataEntry>().HasIndex(e => new { e.DataDefinitionId, e.DataSetId, e.CaseId }).IsUnique();
 
+        modelBuilder.Entity<DataEntry>().Ignore(e => e.Value);
+
         base.OnModelCreating(modelBuilder);
     }
 }

@@ -19,7 +19,6 @@ public class DataEntry : BasicCommonDefinition
 
     private string _separator => Environment.GetEnvironmentVariable("SINGLE_VALUE_SEPARATOR") ?? ";";
 
-    [NotMapped]
     public string? Value
     {
         get => DataDefinition.MultipleValues

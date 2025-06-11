@@ -47,12 +47,12 @@ public class DataEntriesController(DataService _dataService, IDbContextFactory<A
         return NoContent();
     }
 
-    [HttpPut("{entryId:long}")]
-    public async Task<ActionResult<object>> UpdateEntryAsync([FromRoute] long entryId, [FromBody] UpdateEntryDto dto)
+    [HttpPut("{caseName}/{entryId:long}")]
+    public async Task<ActionResult<object>> UpdateEntryAsync([FromRoute] string caseName, [FromRoute] long entryId, [FromBody] UpdateEntryDto dto)
     {
         await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
         {
-            await _dataService.UpdateDataEntryAsync(entryId, dto.Values, dto.Tags, dto.DataSetName);
+            await _dataService.UpdateDataEntryAsync(caseName, entryId, dto.Values, dto.Tags, dto.DataSetName);
         });
 
         return NoContent();

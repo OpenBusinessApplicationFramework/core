@@ -1,6 +1,7 @@
 ﻿using Core.Db;
 using Core.Models.Action;
 using Core.Services.Action;
+using Core.Services.Data;
 using Core.Utils.Transactions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
@@ -10,7 +11,7 @@ namespace Core.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class ActionsController(ActionService _actionService, IDbContextFactory<ApplicationDbContext> _dbContextFactory) : ControllerBase
+public class ActionsController(ActionService _actionService, DataService _dataService, IDbContextFactory<ApplicationDbContext> _dbContextFactory) : ControllerBase
 {
     [HttpGet("{caseName}/odata")]
     public async Task<ActionResult<IQueryable<ActionDefinition>>> GetAsync(ODataQueryOptions<ActionDefinition> queryOptions, [FromRoute] string caseName)
@@ -44,7 +45,7 @@ public class ActionsController(ActionService _actionService, IDbContextFactory<A
     {
         await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
         {
-            await _actionService.ExecuteActionAsync(caseName, actionName, null);
+            await new ActionExecuteService(_dbContextFactory, _dataService).ExecuteActionAsync(caseName, actionName, null);
         });
 
         return NoContent();
