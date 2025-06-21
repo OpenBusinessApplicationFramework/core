@@ -70,7 +70,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         await db.SaveChangesAsync();
     }
 
-    public async Task<IList<DataEntry>> GetDataEntriesAsync(ApplicationDbContext db, string caseName, string? dataDefinitionName = null, string[]? tags = null, string? getSubTagsFromTopTag = null)
+    public async Task<IList<DataEntry>> GetDataEntriesAsync(ApplicationDbContext db, string caseName, string? dataDefinitionName = null, string[]? tags = null, string? getSubTagsFromTopTag = null, bool skipCalculated = false)
     {
         var query = db.DataEntries.Include(e => e.Case).Include(e => e.DataDefinition).Include(e => e.Tags).Where(e => e.Case.Name == caseName);
 
@@ -93,7 +93,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
             object parsed = result.DataDefinition.ValueType switch
             {
                 ValueType.Static => ParseValueInRightObject(result),
-                ValueType.Calculated => await HandleCalculatedAsync(result),
+                ValueType.Calculated => skipCalculated ? ParseValueInRightObject(result) : await HandleCalculatedAsync(result),
                 ValueType.Connected => HandleConnected(await _dbContextFactory.CreateDbContextAsync(), result),
                 _ => throw new InvalidOperationException("Unknown ValueType.")
             };
@@ -107,7 +107,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         return results;
     }
 
-    public async Task<object> CreateDataEntryAsync(string caseName, string dataDefinitionName, List<string>? values, List<string>? tags = null)
+    public async Task CreateDataEntryAsync(string caseName, string dataDefinitionName, List<string>? values, List<string>? tags = null)
     {
         await using var db = await _dbContextFactory.CreateDbContextAsync();
 
@@ -156,14 +156,11 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         db.DataEntries.Add(entry);
         await db.SaveChangesAsync();
 
-        object parsed = ParseValueInRightObject(entry);
         if (def.CalculateType == CalculateType.OnInsert && !string.IsNullOrWhiteSpace(def.ActionForCalculated))
-            await new ActionExecuteService(_dbContextFactory, this).ExecuteActionAsync(caseName, def.ActionForCalculated, parsed);
-
-        return parsed;
+            await new ActionExecuteService(_dbContextFactory, this).ExecuteActionAsync(caseName, def.ActionForCalculated, entry.Id);
     }
 
-    public async Task<object> UpdateDataEntryAsync(string caseName, long entryId, List<string> values, List<string>? tags = null)
+    public async Task UpdateDataEntryAsync(string caseName, long entryId, List<string> values, List<string>? tags = null, bool skipCalculated = false)
     {
         await using var db = await _dbContextFactory.CreateDbContextAsync();
 
@@ -196,11 +193,8 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
 
         await db.SaveChangesAsync();
 
-        object parsed = ParseValueInRightObject(entry);
-        if (def.CalculateType == CalculateType.OnInsert && !string.IsNullOrWhiteSpace(def.ActionForCalculated))
-            await new ActionExecuteService(_dbContextFactory, this).ExecuteActionAsync(entry.Case.Name, def.ActionForCalculated, parsed);
-
-        return parsed;
+        if (def.CalculateType == CalculateType.OnInsert && !string.IsNullOrWhiteSpace(def.ActionForCalculated) && !skipCalculated)
+            await new ActionExecuteService(_dbContextFactory, this).ExecuteActionAsync(entry.Case.Name, def.ActionForCalculated, entry.Id);
     }
 
     public async Task DeleteDataEntryAsync(long entryId)
@@ -216,12 +210,13 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
     private async Task<object> HandleCalculatedAsync(DataEntry entry)
     {
         var def = entry.DataDefinition;
-        var parsed = ParseValueInRightObject(entry);
 
         if (def.CalculateType == CalculateType.OnCall && !string.IsNullOrWhiteSpace(def.ActionForCalculated))
-            await new ActionExecuteService(_dbContextFactory, this).ExecuteActionAsync(entry.Case.Name, def.ActionForCalculated, parsed);
+            await new ActionExecuteService(_dbContextFactory, this).ExecuteActionAsync(entry.Case.Name, def.ActionForCalculated, entry.Id);
 
-        return parsed;
+        var newEntry = await (await _dbContextFactory.CreateDbContextAsync()).DataEntries.Include(x => x.DataDefinition).SingleAsync(x => x.Id == entry.Id);
+
+        return ParseValueInRightObject(newEntry!);
     }
 
     private object HandleConnected(ApplicationDbContext db, DataEntry entry)

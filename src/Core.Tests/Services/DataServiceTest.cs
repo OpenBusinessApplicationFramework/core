@@ -1,0 +1,109 @@
+﻿using Core.Services.Action;
+using Core.Services.Data;
+using Core.Tests.Common;
+
+namespace Core.Tests.Services;
+
+public class DataServiceTest
+{
+    [Fact]
+    public async Task GetDataEntries_ReturnsSeededEntries_Case1()
+    {
+        var (context, factory) = TestUtilities.CreateContext();
+        var actionService = new ActionService(factory);
+        var dataService = new DataService(factory, actionService);
+
+        var entries = await dataService.GetDataEntriesAsync(context, "Case1");
+
+        Assert.Equal(2, entries.Count);
+        Assert.Contains(entries, e => e.DataDefinition.Name == "Name");
+        Assert.Contains(entries, e => e.DataDefinition.Name == "Email_Verified");
+    }
+
+    [Fact]
+    public async Task GetDataEntries_ReturnsSeededEntries_Case2()
+    {
+        var (context, factory) = TestUtilities.CreateContext();
+        var actionService = new ActionService(factory);
+        var dataService = new DataService(factory, actionService);
+
+        var entry = await dataService.GetDataEntriesAsync(context, "Case2");
+
+        Assert.Single(entry);
+        Assert.Contains(entry, e => e.DataDefinition.Name == "Name");
+    }
+
+    [Fact]
+    public async Task GetDataEntries_CheckLinked()
+    {
+        var (context, factory) = TestUtilities.CreateContext();
+        var actionService = new ActionService(factory);
+        var dataService = new DataService(factory, actionService);
+
+        var entries = await dataService.GetDataEntriesAsync(context, "Case2", "Name", ["Customers_Customer1"]);
+
+        Assert.Equal("Test Person", entries.Single().Value);
+    }
+
+    [Fact]
+    public async Task GetDataEntries_CheckBackLinked()
+    {
+        var (context, factory) = TestUtilities.CreateContext();
+        var actionService = new ActionService(factory);
+        var dataService = new DataService(factory, actionService);
+
+        var entryCase2 = await dataService.GetDataEntriesAsync(context, "Case2", "Name", ["Customers_Customer1"]);
+
+        await dataService.UpdateDataEntryAsync("Case2", entryCase2.Single().Id, ["Test Person Updated"]);
+
+        var entryCase1 = await dataService.GetDataEntriesAsync(context, "Case2", "Name", ["Customers_Customer1"]);
+
+        Assert.Single(entryCase1);
+        Assert.Single(entryCase2);
+        Assert.Equal("Test Person Updated", entryCase1.Single().Value);
+    }
+
+    [Fact]
+    public async Task GetDataEntries_CheckSubTags()
+    {
+        var (context, factory) = TestUtilities.CreateContext();
+        var actionService = new ActionService(factory);
+        var dataService = new DataService(factory, actionService);
+
+        var entry = await dataService.GetDataEntriesAsync(context, "Case1", "Name", getSubTagsFromTopTag: "Customers");
+
+        Assert.Single(entry);
+        Assert.Contains(entry, e => e.DataDefinition.Name == "Name");
+    }
+
+    [Fact]
+    public async Task GetDataEntries_GetDataEntry_CheckCalculated()
+    {
+        var (context, factory) = TestUtilities.CreateContext();
+        var actionService = new ActionService(factory);
+        var dataService = new DataService(factory, actionService);
+
+        await dataService.CreateDataEntryAsync("Case2", "Id_Get", [string.Empty], ["Customers", "Customers_Customer1"]);
+
+        var _ = await dataService.GetDataEntriesAsync(context, "Case2", "Id_Get", ["Customers", "Customers_Customer1"]);
+        var entry = await dataService.GetDataEntriesAsync(context, "Case2", "Id_Get", ["Customers", "Customers_Customer1"]);
+
+        Assert.Single(entry);
+        Assert.Equal("123123", entry.Single().Value);
+    }
+
+    [Fact]
+    public async Task GetDataEntries_PostDataEntry_CheckCalculated()
+    {
+        var (context, factory) = TestUtilities.CreateContext();
+        var actionService = new ActionService(factory);
+        var dataService = new DataService(factory, actionService);
+
+        await dataService.CreateDataEntryAsync("Case2", "Id_Post", [string.Empty], ["Customers", "Customers_Customer1"]);
+
+        var entry = await dataService.GetDataEntriesAsync(context, "Case2", "Id_Post", ["Customers", "Customers_Customer1"]);
+
+        Assert.Single(entry);
+        Assert.Equal("123", entry.Single().Value);
+    }
+}

@@ -3,13 +3,12 @@ using Core.Models.Data;
 using Core.Services.Data;
 using Jint;
 using Microsoft.EntityFrameworkCore;
-using System.Diagnostics;
 
 namespace Core.Services.Action
 {
     public class ActionExecuteService(IDbContextFactory<ApplicationDbContext> _dbContextFactory, DataService _dataService)
     {
-        public async Task ExecuteActionAsync(string caseName, string actionName, object? calculatedData = null)
+        public async Task ExecuteActionAsync(string caseName, string actionName, long? entryIdToCalculate = null)
         {
             await using var db = await _dbContextFactory.CreateDbContextAsync();
 
@@ -23,10 +22,17 @@ namespace Core.Services.Action
             using (var http = new HttpClient())
                 engine.Execute(await http.GetStringAsync("https://cdn.jsdelivr.net/npm/mathjs@14.4.0/lib/browser/math.min.js"));
 
-            if (calculatedData != null)
-                engine.SetValue("CalculatedDataEntry", calculatedData);
+            bool skipCalculatedAtEntriesLoad = false;
 
-            var allEntries = (await _dataService.GetDataEntriesAsync(db, caseName, null, actionDef.TagUsedInAction.ToArray())).ToList();
+            if (entryIdToCalculate != null)
+            {
+                var entry = await db.DataEntries.Include(x => x.DataDefinition).SingleAsync(x => x.Id == entryIdToCalculate);
+                engine.SetValue("CalculatedDataEntry", entry);
+
+                skipCalculatedAtEntriesLoad = entry.DataDefinition.CalculateType == CalculateType.OnCall;
+            }
+
+            var allEntries = (await _dataService.GetDataEntriesAsync(db, caseName, null, actionDef.TagUsedInAction.ToArray(), skipCalculated: skipCalculatedAtEntriesLoad)).ToList();
 
             foreach (var tagName in actionDef.TagUsedInAction)
             {
@@ -40,7 +46,7 @@ namespace Core.Services.Action
                 var grouped = entriesByTag.GroupBy(e => e.DataDefinition.Name, StringComparer.OrdinalIgnoreCase);
 
                 foreach (var grp in grouped)
-                    engine.SetValue($"tag_{grp.Key}", grp.ToList());
+                    engine.SetValue($"{tagName}_{grp.Key}", grp.ToList());
             }
 
             try
@@ -56,7 +62,7 @@ namespace Core.Services.Action
 
             foreach (var entry in modified)
             {
-                await _dataService.UpdateDataEntryAsync(caseName, entry.Id, entry.Values, entry.Tags?.Select(t => t.Name).ToList() ?? null);
+                await _dataService.UpdateDataEntryAsync(caseName, entry.Id, entry.Values, entry.Tags?.Select(t => t.Name).ToList() ?? null, entry.Id == (entryIdToCalculate ?? 0));
             }
         }
     }
