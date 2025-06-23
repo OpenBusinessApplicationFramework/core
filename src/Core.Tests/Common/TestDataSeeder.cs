@@ -20,6 +20,7 @@ public static class TestDataSeeder
 
         var name = new DataDefinition { Name = "Name", ValueType = Models.Data.ValueType.Static, Case = case1 };
         var email_verified = new DataDefinition { Name = "Email_Verified", ValueType = Models.Data.ValueType.Static, InitialValue = "false", Case = case1 };
+        var id = new DataDefinition { Name = "Id", ValueType = Models.Data.ValueType.AutoIncrease, AutoIncreaseAtTag = "Customers", Case = case1 };
 
         var nameOfPerson1 = new DataEntry
         {
@@ -29,7 +30,7 @@ public static class TestDataSeeder
             Value = "Test Person"
         };
 
-        var emailVerifiedOfPerson1 = new DataEntry
+        var emailVerifiedOfPerson2 = new DataEntry
         {
             Case = case1,
             DataDefinition = email_verified,
@@ -70,8 +71,8 @@ public static class TestDataSeeder
         db.Tenants.Add(tenant);
         db.Cases.AddRange(case1, case2);
         db.Tags.AddRange(tagCustomers, tagCustomer1, tagCustomer2, tagCustomersCase2, tagCustomer1Case2);
-        db.DataDefinitions.AddRange(name, email_verified, nameLinked, customerIdCalculatedAtGet, customerIdCalculatedAtPost);
-        db.DataEntries.AddRange(nameOfPerson1, emailVerifiedOfPerson1, nameLinkedOfPerson1);
+        db.DataDefinitions.AddRange(name, email_verified, nameLinked, customerIdCalculatedAtGet, customerIdCalculatedAtPost, id);
+        db.DataEntries.AddRange(nameOfPerson1, emailVerifiedOfPerson2, nameLinkedOfPerson1);
         db.ActionDefinitions.AddRange(actionExecution, actionExecutionForCalculated);
 
         await db.SaveChangesAsync();

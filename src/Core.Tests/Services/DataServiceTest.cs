@@ -1,6 +1,10 @@
-﻿using Core.Services.Action;
+﻿using Core.Models.Common;
+using Core.Models.Data;
+using Core.Services.Action;
 using Core.Services.Data;
 using Core.Tests.Common;
+using IdGen;
+using System.Collections.ObjectModel;
 
 namespace Core.Tests.Services;
 
@@ -105,5 +109,25 @@ public class DataServiceTest
 
         Assert.Single(entry);
         Assert.Equal("123", entry.Single().Value);
+    }
+
+    [Fact]
+    public async Task CreateDataEntryAsync_CheckAutoIncrease()
+    {
+        var (context, factory) = TestUtilities.CreateContext();
+        var actionService = new ActionService(factory);
+        var dataService = new DataService(factory, actionService);
+
+        await dataService.CreateDataEntryAsync("Case1", "Id", null, new List<string>() { { "Customers" }, { "Customers_Customer1" } });
+        await dataService.CreateDataEntryAsync("Case1", "Id", null, new List<string>() { { "Customers" }, { "Customers_Customer2" } });
+
+        var entry1 = await dataService.GetDataEntriesAsync(context, "Case1", "Id", ["Customers_Customer1"]);
+        var entry2 = await dataService.GetDataEntriesAsync(context, "Case1", "Id", ["Customers_Customer2"]);
+
+        Assert.InRange(entry1.SingleOrDefault().Value.Length, 18, 19);
+        Assert.Matches(@"^\d+$", entry1?.Single()?.Value);
+
+        Assert.InRange(entry2.SingleOrDefault().Value.Length, 18, 19);
+        Assert.Matches(@"^\d+$", entry2?.Single()?.Value);
     }
 }

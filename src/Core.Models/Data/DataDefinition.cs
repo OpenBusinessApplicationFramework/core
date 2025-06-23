@@ -7,7 +7,6 @@ public class DataDefinition : CommonDefinition
 {
     public bool MultipleValues { get; set; } = false;
     public bool ReadOnly { get; set; } = false;
-    public bool AutoIncrease { get; set; } = false;
 
     public string? InitialValue { get; set; }
 
@@ -21,16 +20,25 @@ public class DataDefinition : CommonDefinition
     public ConnectionType? ConnectionType { get; set; }
     public string? PathForConnected { get; set; }
 
+    public string? AutoIncreaseAtTag { get; set; }
+
     public bool IsValid =>
         (ValueType == ValueType.Static
             && string.IsNullOrWhiteSpace(ActionForCalculated)
             && string.IsNullOrWhiteSpace(PathForConnected))
+            && string.IsNullOrWhiteSpace(AutoIncreaseAtTag)
         || (ValueType == ValueType.Calculated
             && CalculateType != null
             && !string.IsNullOrWhiteSpace(ActionForCalculated)
             && string.IsNullOrWhiteSpace(PathForConnected))
+            && string.IsNullOrWhiteSpace(AutoIncreaseAtTag)
         || (ValueType == ValueType.Connected
             && ConnectionType != null
             && !string.IsNullOrWhiteSpace(PathForConnected)
-            && string.IsNullOrWhiteSpace(ActionForCalculated));
+            && string.IsNullOrWhiteSpace(ActionForCalculated))
+            && string.IsNullOrWhiteSpace(AutoIncreaseAtTag)
+        || (ValueType == ValueType.AutoIncrease
+            && string.IsNullOrWhiteSpace(PathForConnected)
+            && string.IsNullOrWhiteSpace(ActionForCalculated))
+            && !string.IsNullOrWhiteSpace(AutoIncreaseAtTag);
 }

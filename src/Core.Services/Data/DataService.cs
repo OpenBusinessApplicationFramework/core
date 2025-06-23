@@ -1,6 +1,7 @@
 ﻿using Core.Db;
 using Core.Models.Data;
 using Core.Services.Action;
+using IdGen;
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 using System.Linq;
@@ -45,7 +46,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         existing.Name = updatedDefinition.Name;
         existing.MultipleValues = updatedDefinition.MultipleValues;
         existing.ReadOnly = updatedDefinition.ReadOnly;
-        existing.AutoIncrease = updatedDefinition.AutoIncrease;
+        existing.AutoIncreaseAtTag = updatedDefinition.AutoIncreaseAtTag;
         existing.InitialValue = updatedDefinition.InitialValue;
         existing.ValueType = updatedDefinition.ValueType;
         existing.ActionForCalculated = updatedDefinition.ActionForCalculated;
@@ -95,6 +96,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
                 ValueType.Static => ParseValueInRightObject(result),
                 ValueType.Calculated => skipCalculated ? ParseValueInRightObject(result) : await HandleCalculatedAsync(result),
                 ValueType.Connected => HandleConnected(await _dbContextFactory.CreateDbContextAsync(), result),
+                ValueType.AutoIncrease => ParseValueInRightObject(result),
                 _ => throw new InvalidOperationException("Unknown ValueType.")
             };
 
@@ -113,6 +115,9 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
 
         var dataCase = await db.Cases.SingleAsync(c => c.Name == caseName);
         var def = await db.DataDefinitions.Where(x => x.CaseId == dataCase.Id).SingleAsync(d => d.Name == dataDefinitionName);
+
+        if (!def.IsValid)
+            throw new InvalidOperationException($"DataDefinition '{def.Name}' is not valid.");
 
         var tagsToAdd = new List<Tag>();
         if (tags != null && tags.Count > 0)
@@ -147,13 +152,15 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
             Values = initValue
         };
 
-        if (!def.IsValid)
-            throw new InvalidOperationException($"DataDefinition '{def.Name}' is not valid.");
-
         if (!entry.IsValid)
             throw new InvalidOperationException("At least one tag or one dataset must be provided");
 
         db.DataEntries.Add(entry);
+        await db.SaveChangesAsync();
+
+        if (def.AutoIncreaseAtTag != null && tags.Contains(def.AutoIncreaseAtTag))
+            entry.Value = new IdGenerator((int)(entry.Id & 0x3FF)).CreateId().ToString();
+
         await db.SaveChangesAsync();
 
         if (def.CalculateType == CalculateType.OnInsert && !string.IsNullOrWhiteSpace(def.ActionForCalculated))

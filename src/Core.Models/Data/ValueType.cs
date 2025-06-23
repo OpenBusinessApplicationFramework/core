@@ -4,5 +4,6 @@ public enum ValueType
 {
     Static,
     Calculated,
-    Connected
+    Connected,
+    AutoIncrease
 }
