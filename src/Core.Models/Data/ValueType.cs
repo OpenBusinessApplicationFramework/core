@@ -5,5 +5,5 @@ public enum ValueType
     Static,
     Calculated,
     Connected,
-    AutoIncrease
+    UniqueIdentifier
 }

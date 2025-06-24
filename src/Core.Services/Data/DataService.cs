@@ -46,7 +46,6 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         existing.Name = updatedDefinition.Name;
         existing.MultipleValues = updatedDefinition.MultipleValues;
         existing.ReadOnly = updatedDefinition.ReadOnly;
-        existing.AutoIncreaseAtTag = updatedDefinition.AutoIncreaseAtTag;
         existing.InitialValue = updatedDefinition.InitialValue;
         existing.ValueType = updatedDefinition.ValueType;
         existing.ActionForCalculated = updatedDefinition.ActionForCalculated;
@@ -96,7 +95,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
                 ValueType.Static => ParseValueInRightObject(result),
                 ValueType.Calculated => skipCalculated ? ParseValueInRightObject(result) : await HandleCalculatedAsync(result),
                 ValueType.Connected => HandleConnected(await _dbContextFactory.CreateDbContextAsync(), result),
-                ValueType.AutoIncrease => ParseValueInRightObject(result),
+                ValueType.UniqueIdentifier => ParseValueInRightObject(result),
                 _ => throw new InvalidOperationException("Unknown ValueType.")
             };
 
@@ -158,7 +157,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         db.DataEntries.Add(entry);
         await db.SaveChangesAsync();
 
-        if (def.AutoIncreaseAtTag != null && tags.Contains(def.AutoIncreaseAtTag))
+        if (def.ValueType == ValueType.UniqueIdentifier)
             entry.Value = new IdGenerator((int)(entry.Id & 0x3FF)).CreateId().ToString();
 
         await db.SaveChangesAsync();

@@ -20,7 +20,7 @@ public static class TestDataSeeder
 
         var name = new DataDefinition { Name = "Name", ValueType = Models.Data.ValueType.Static, Case = case1 };
         var email_verified = new DataDefinition { Name = "Email_Verified", ValueType = Models.Data.ValueType.Static, InitialValue = "false", Case = case1 };
-        var id = new DataDefinition { Name = "Id", ValueType = Models.Data.ValueType.AutoIncrease, AutoIncreaseAtTag = "Customers", Case = case1 };
+        var id = new DataDefinition { Name = "Id", ValueType = Models.Data.ValueType.UniqueIdentifier, Case = case1 };
 
         var nameOfPerson1 = new DataEntry
         {
