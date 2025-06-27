@@ -29,13 +29,25 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContextFactory<ApplicationDbContext>(options =>
     options.UseNpgsql(
-        builder.Configuration["DbConnectionStrings"],
+        builder.Configuration["DbConnectionStrings"] ?? Environment.GetEnvironmentVariable("DB_CONNECTION_STRING") ?? throw new Exception("'DB_CONNECTION_STRING' not set"),
         sqlOptions =>
         {
             sqlOptions.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName);
         }
     )
 );
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("CorsPolicy", policy =>
+    {
+        policy
+            .WithOrigins(builder.Configuration["UIFrontendURI"] ?? Environment.GetEnvironmentVariable("UI_FRONTEND_URI") ?? throw new Exception("'UI_FRONTEND_URI' not set"))
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
 
 builder.Services.AddScoped<ActionService>();
 builder.Services.AddScoped<CommonService>();
@@ -50,6 +62,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseCors("CorsPolicy");
 
 app.UseHttpsRedirection();
 

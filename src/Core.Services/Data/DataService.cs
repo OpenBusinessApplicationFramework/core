@@ -70,7 +70,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         await db.SaveChangesAsync();
     }
 
-    public async Task<IList<DataEntry>> GetDataEntriesAsync(ApplicationDbContext db, string caseName, string? dataDefinitionName = null, string[]? tags = null, string? getSubTagsFromTopTag = null, bool skipCalculated = false)
+    public async Task<IList<DataEntry>> GetDataEntriesAsync(ApplicationDbContext db, string caseName, string? dataDefinitionName = null, string[]? tags = null, string? getSubTagsFromTopTag = null, string? globalFilter = null, bool skipCalculated = false)
     {
         var query = db.DataEntries.Include(e => e.Case).Include(e => e.DataDefinition).Include(e => e.Tags).Where(e => e.Case.Name == caseName);
 
@@ -80,10 +80,24 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         if (tags?.Length > 0)
             query = query.Where(e => e.Tags.Any(t => tags.Contains(t.Name)));
 
+        if (!string.IsNullOrWhiteSpace(globalFilter))
+        {
+            var tagNames = await query
+                .Where(e => e.Values.Any(x => x.ToLower().StartsWith(globalFilter.ToLower())))
+                .SelectMany(e => e.Tags.Select(t => t.Name))
+                .Distinct()
+                .ToListAsync();
+
+            if (getSubTagsFromTopTag != null)
+                tagNames = tagNames.Where(e => e.StartsWith($"{getSubTagsFromTopTag}_")).ToList();
+
+            query = query.Where(e => e.Tags.Any(t => tagNames.Contains(t.Name)));
+        }
+
         if (!string.IsNullOrWhiteSpace(getSubTagsFromTopTag))
             query = query.Where(e => e.Tags.Any(t => t.Name.StartsWith($"{getSubTagsFromTopTag}_")));
 
-        var results = query.ToList();
+        var results = await query.ToListAsync();
 
         foreach (var result in results)
         {
@@ -128,6 +142,10 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
                 throw new InvalidOperationException($"The tag '{tag.Name}' is defined as unique and already holds data for the definition '{def.Name}'.");
         }
 
+        var invalidTag = tagsToAdd.FirstOrDefault(tag => tag.AllowedDataDefinitions != null && !tag.AllowedDataDefinitions.Contains(def.Name));
+        if (invalidTag != null)
+            throw new Exception($"DataDefinition {def.Name} is not allowed in tag {invalidTag.Name}!");
+
         var initValue = string.IsNullOrWhiteSpace(def.InitialValue) ? (values ?? new List<string>()) : [def.InitialValue];
 
         if (def.PathForConnected != null && def.ConnectionType != null)
@@ -158,9 +176,10 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         await db.SaveChangesAsync();
 
         if (def.ValueType == ValueType.UniqueIdentifier)
+        {
             entry.Value = new IdGenerator((int)(entry.Id & 0x3FF)).CreateId().ToString();
-
-        await db.SaveChangesAsync();
+            await db.SaveChangesAsync();
+        }
 
         if (def.CalculateType == CalculateType.OnInsert && !string.IsNullOrWhiteSpace(def.ActionForCalculated))
             await new ActionExecuteService(_dbContextFactory, this).ExecuteActionAsync(caseName, def.ActionForCalculated, entry.Id);
@@ -180,6 +199,10 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
             var newTags = await db.Tags.Where(t => tags.Contains(t.Name)).ToListAsync();
             entry.Tags = newTags;
         }
+
+        var invalidTag = entry.Tags.FirstOrDefault(tag => tag.AllowedDataDefinitions != null && !tag.AllowedDataDefinitions.Contains(def.Name));
+        if (invalidTag != null)
+            throw new Exception($"DataDefinition {def.Name} is not allowed in tag {invalidTag.Name}!");
 
         if (def.ReadOnly)
             throw new Exception("The entry can't be changed as it is readonly.");

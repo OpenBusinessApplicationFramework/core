@@ -26,8 +26,6 @@ public class ApplicationDbContext : DbContext
         modelBuilder.Entity<Tag>().HasIndex(e => new { e.CaseId, e.Name }).IsUnique();
         modelBuilder.Entity<ActionDefinition>().HasIndex(e => new { e.CaseId, e.Name }).IsUnique();
 
-        modelBuilder.Entity<DataEntry>().HasIndex(e => new { e.CaseId, e.DataDefinitionId }).IsUnique();
-
         modelBuilder.Entity<DataEntry>().Ignore(e => e.Value);
 
         base.OnModelCreating(modelBuilder);

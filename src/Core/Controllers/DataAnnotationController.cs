@@ -13,11 +13,11 @@ namespace Core.Controllers;
 public class DataAnnotationController(DataAnnotationService _dataAnnotationService, IDbContextFactory<ApplicationDbContext> _dbContextFactory) : ControllerBase
 {
     [HttpGet("{caseName}/tag/odata")]
-    public async Task<ActionResult<IQueryable<Tag>>> GetTagsAsync(ODataQueryOptions<Tag> queryOptions, [FromRoute] string caseName)
+    public async Task<ActionResult<IQueryable<Tag>>> GetTagsAsync(ODataQueryOptions<Tag> queryOptions, [FromRoute] string caseName, [FromQuery] string? getSubTagsFromTopTag = null)
     {
         var db = await _dbContextFactory.CreateDbContextAsync();
 
-        var query = _dataAnnotationService.GetTags(db, caseName);
+        var query = _dataAnnotationService.GetTags(db, caseName, getSubTagsFromTopTag);
         if (query == null)
             return NotFound();
 
@@ -48,19 +48,13 @@ public class DataAnnotationController(DataAnnotationService _dataAnnotationServi
     [HttpPut("{caseName}/tag")]
     public async Task<ActionResult> UpdateTagAsync([FromRoute] string caseName,
         [FromForm] string name,
-        [FromForm] string description,
-        [FromForm] bool uniqueDefinition)
+        [FromForm] string? description = null,
+        [FromForm] bool? uniqueDefinition = null,
+        [FromForm] string? newName = null)
     {
-        var tag = new Tag
-        {
-            Name = name,
-            Description = description,
-            UniqueDefinition = uniqueDefinition
-        };
-
         await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
         {
-            await _dataAnnotationService.UpdateTagAsync(caseName, tag);
+            await _dataAnnotationService.UpdateTagAsync(caseName, name, description, uniqueDefinition, newName);
         });
 
         return NoContent();

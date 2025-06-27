@@ -6,9 +6,14 @@ namespace Core.Services.Data;
 
 public class DataAnnotationService(IDbContextFactory<ApplicationDbContext> _dbContextFactory)
 {
-    public IQueryable<Tag>? GetTags(ApplicationDbContext db, string caseName)
+    public IQueryable<Tag>? GetTags(ApplicationDbContext db, string caseName, string? getSubTagsFromTopTag = null)
     {
-        return db.Tags.Include(d => d.DataEntries).ThenInclude(e => e.DataDefinition).Include(d => d.DataEntries).Include(d => d.Case).Where(d => d.Case.Name == caseName);
+        var query = db.Tags.Include(d => d.DataEntries).ThenInclude(e => e.DataDefinition).Include(d => d.DataEntries).Include(d => d.Case).Where(d => d.Case.Name == caseName);
+
+        if (!string.IsNullOrWhiteSpace(getSubTagsFromTopTag))
+            query = query.Where(e => e.Name.StartsWith($"{getSubTagsFromTopTag}_"));
+
+        return query;
     }
 
     public async Task<Tag> CreateTagAsync(string caseName, Tag tag)
@@ -25,16 +30,22 @@ public class DataAnnotationService(IDbContextFactory<ApplicationDbContext> _dbCo
         return tag;
     }
 
-    public async Task<Tag> UpdateTagAsync(string caseName, Tag updatedTag)
+    public async Task<Tag> UpdateTagAsync(string caseName, string name, string? description = null, bool? uniqueDefinition = null, string? newName = null)
     {
         await using var db = await _dbContextFactory.CreateDbContextAsync();
-        var existing = await db.Tags.Include(d => d.Case).FirstOrDefaultAsync(d => d.Case.Name == caseName && d.Id == updatedTag.Id);
+        var existing = await db.Tags.Include(d => d.Case).FirstOrDefaultAsync(d => d.Case.Name == caseName && d.Name == name);
 
         if (existing == null)
-            throw new InvalidOperationException($"DataDefinition '{updatedTag.Name}' not found in case '{caseName}'.");
+            throw new InvalidOperationException($"Tag '{existing.Name}' not found in case '{caseName}'.");
 
-        existing.Name = updatedTag.Name;
-        existing.Description = updatedTag.Description;
+        if (description != null)
+            existing.Description = description;
+
+        if (uniqueDefinition != null)
+            existing.UniqueDefinition = (bool)uniqueDefinition;
+
+        if (newName != null)
+            existing.Name = newName;
 
         db.Tags.Update(existing);
         await db.SaveChangesAsync();

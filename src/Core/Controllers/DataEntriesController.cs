@@ -13,11 +13,11 @@ namespace Core.Controllers;
 public class DataEntriesController(DataService _dataService, IDbContextFactory<ApplicationDbContext> _dbContextFactory) : ControllerBase
 {
     [HttpGet("{caseName}/inmemoryodata")]
-    public async Task<ActionResult<IQueryable<DataEntry>>> GetEntriesAsync(ODataQueryOptions<DataEntry> queryOptions, [FromRoute] string caseName, [FromQuery] string? definitionName = null, [FromQuery] string[]? tags = null, [FromQuery] string? getSubTagsFromTopTag = null)
+    public async Task<ActionResult<IQueryable<DataEntry>>> GetEntriesAsync(ODataQueryOptions<DataEntry> queryOptions, [FromRoute] string caseName, [FromQuery] string? definitionName = null, [FromQuery] string[]? tags = null, [FromQuery] string? getSubTagsFromTopTag = null, [FromQuery] string? globalFilter = null)
     {
         var db = await _dbContextFactory.CreateDbContextAsync();
 
-        var entries = await _dataService.GetDataEntriesAsync(db, caseName, definitionName, tags, getSubTagsFromTopTag);
+        var entries = await _dataService.GetDataEntriesAsync(db, caseName, definitionName, tags, getSubTagsFromTopTag, globalFilter);
 
         return Ok(queryOptions.ApplyTo(entries.AsQueryable()));
     }

@@ -12,5 +12,7 @@ public class Tag : CommonDefinition
 
     public bool UniqueDefinition { get; set; } = false;
 
+    public List<string>? AllowedDataDefinitions { get; set; }
+
     public Collection<DataEntry> DataEntries { get; set; } = new();
 }
