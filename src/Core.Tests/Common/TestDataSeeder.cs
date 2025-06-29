@@ -10,9 +10,8 @@ public static class TestDataSeeder
 {
     public static async Task SeedAsync(ApplicationDbContext db)
     {
-        var tenant = new Tenant { Name = "Tenant1" };
         //Case1
-        var case1 = new Case { Name = "Case1", Description = "Test Case", Tenant = tenant };
+        var case1 = new Case { Name = "Case1", Description = "Test Case" };
 
         var tagCustomers = new Tag { Name = "Customers", Description = "Collection of customers", Case = case1 };
         var tagCustomer1 = new Tag { Name = "Customers_Customer1", Description = "Customer1", Case = case1, UniqueDefinition = true };
@@ -38,7 +37,7 @@ public static class TestDataSeeder
         };
 
         //Case2
-        var case2 = new Case { Name = "Case2", Description = "Test Case", Tenant = tenant };
+        var case2 = new Case { Name = "Case2", Description = "Test Case" };
         var tagCustomersCase2 = new Tag { Name = "Customers", Description = "Collection of customers", Case = case2 };
         var tagCustomer1Case2 = new Tag { Name = "Customers_Customer1", Description = "Customer1", Case = case2, UniqueDefinition = true };
 
@@ -68,7 +67,6 @@ public static class TestDataSeeder
             ActionFunction = "CalculatedDataEntry.Value = (CalculatedDataEntry.Value ?? '') + '123';"
         };
 
-        db.Tenants.Add(tenant);
         db.Cases.AddRange(case1, case2);
         db.Tags.AddRange(tagCustomers, tagCustomer1, tagCustomer2, tagCustomersCase2, tagCustomer1Case2);
         db.DataDefinitions.AddRange(name, email_verified, nameLinked, customerIdCalculatedAtGet, customerIdCalculatedAtPost, id);

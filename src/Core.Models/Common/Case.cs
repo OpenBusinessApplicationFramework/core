@@ -11,10 +11,6 @@ public class Case
     public string Name { get; set; }
     public string Description { get; set; }
 
-    [ForeignKey(nameof(Tenant))]
-    public long TenantId { get; set; }
-    public Tenant Tenant { get; set; }
-
     public string MathJsUri { get; set; } = "https://cdn.jsdelivr.net/npm/mathjs@14.4.0/lib/browser/math.min.js";
 
     public Collection<DataDefinition> DataDefinitions { get; set; } = new();

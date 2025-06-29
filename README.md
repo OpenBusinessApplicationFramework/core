@@ -15,9 +15,6 @@ The goal of this open source project is to make application development—especi
 > &#x26A0; **In Development – Not Ready for Production**
 
 This project is currently under active development. Please note the following:
-
-- **Tenancy feature not working**  
-  The tenancy feature exists only as a placeholder and has no effect.
   
 - **Insufficient test coverage**  
   More tests are planned; at the moment, only the most critical areas are covered.
@@ -37,7 +34,6 @@ This project is currently under active development. Please note the following:
 |---------------------------------------|---------------:|:-------------------:|
 | Conceptual design                     | Late Q1 2025   | &#x2705; Done       |
 | API Completion (v1)                   | Q2 2025        | &#x2705; Done       |
-| Tenancy feature                       | Early Q3 2025  | &#x2699; In Progress|
 | GUI Alpha (Auto-GUI)                  | Q3 2025        | &#x2699; In Progress|
 | OIDC & Key Vault Integration          | Q3 2025        | &#x23F3; Upcoming   |
 | Admin tool                            | Late Q3 2025   | &#x23F3; Upcoming   |

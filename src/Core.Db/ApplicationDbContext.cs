@@ -7,7 +7,6 @@ namespace Core.Db;
 
 public class ApplicationDbContext : DbContext
 {
-    public DbSet<Tenant> Tenants { get; set; } = null!;
     public DbSet<Case> Cases { get; set; } = null!;
     public DbSet<DataDefinition> DataDefinitions { get; set; } = null!;
     public DbSet<DataEntry> DataEntries { get; set; } = null!;
