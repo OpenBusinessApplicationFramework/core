@@ -8,7 +8,7 @@ public class DataAnnotationService(IDbContextFactory<ApplicationDbContext> _dbCo
 {
     public IQueryable<Tag>? GetTags(ApplicationDbContext db, string caseName, string? getSubTagsFromTopTag = null)
     {
-        var query = db.Tags.Include(d => d.DataEntries).ThenInclude(e => e.DataDefinition).Include(d => d.DataEntries).Include(d => d.Case).Where(d => d.Case.Name == caseName);
+        var query = db.Tags.Include(d => d.DataEntries).ThenInclude(e => e.DataDefinition).Include(d => d.Case).Where(d => d.Case.Name == caseName);
 
         if (!string.IsNullOrWhiteSpace(getSubTagsFromTopTag))
             query = query.Where(e => e.Name.StartsWith($"{getSubTagsFromTopTag}_"));
