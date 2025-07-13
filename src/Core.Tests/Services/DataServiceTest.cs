@@ -15,7 +15,8 @@ public class DataServiceTest
     {
         var (context, factory) = TestUtilities.CreateContext();
         var actionService = new ActionService(factory);
-        var dataService = new DataService(factory, actionService);
+        var dataAnnotationService = new DataAnnotationService(factory);
+        var dataService = new DataService(factory, dataAnnotationService, actionService);
 
         var entries = await dataService.GetDataEntriesAsync(context, "Case1");
 
@@ -29,7 +30,8 @@ public class DataServiceTest
     {
         var (context, factory) = TestUtilities.CreateContext();
         var actionService = new ActionService(factory);
-        var dataService = new DataService(factory, actionService);
+        var dataAnnotationService = new DataAnnotationService(factory);
+        var dataService = new DataService(factory, dataAnnotationService, actionService);
 
         var entry = await dataService.GetDataEntriesAsync(context, "Case2");
 
@@ -42,7 +44,8 @@ public class DataServiceTest
     {
         var (context, factory) = TestUtilities.CreateContext();
         var actionService = new ActionService(factory);
-        var dataService = new DataService(factory, actionService);
+        var dataAnnotationService = new DataAnnotationService(factory);
+        var dataService = new DataService(factory, dataAnnotationService, actionService);
 
         var entries = await dataService.GetDataEntriesAsync(context, "Case2", "Name", ["Customers_Customer1"]);
 
@@ -54,7 +57,8 @@ public class DataServiceTest
     {
         var (context, factory) = TestUtilities.CreateContext();
         var actionService = new ActionService(factory);
-        var dataService = new DataService(factory, actionService);
+        var dataAnnotationService = new DataAnnotationService(factory);
+        var dataService = new DataService(factory, dataAnnotationService, actionService);
 
         var entryCase2 = await dataService.GetDataEntriesAsync(context, "Case2", "Name", ["Customers_Customer1"]);
 
@@ -72,7 +76,8 @@ public class DataServiceTest
     {
         var (context, factory) = TestUtilities.CreateContext();
         var actionService = new ActionService(factory);
-        var dataService = new DataService(factory, actionService);
+        var dataAnnotationService = new DataAnnotationService(factory);
+        var dataService = new DataService(factory, dataAnnotationService, actionService);
 
         var entry = await dataService.GetDataEntriesAsync(context, "Case1", "Name", getSubTagsFromTopTag: "Customers");
 
@@ -85,7 +90,8 @@ public class DataServiceTest
     {
         var (context, factory) = TestUtilities.CreateContext();
         var actionService = new ActionService(factory);
-        var dataService = new DataService(factory, actionService);
+        var dataAnnotationService = new DataAnnotationService(factory);
+        var dataService = new DataService(factory, dataAnnotationService, actionService);
 
         await dataService.CreateDataEntryAsync("Case2", "Id_Get", [string.Empty], ["Customers", "Customers_Customer1"]);
 
@@ -101,7 +107,8 @@ public class DataServiceTest
     {
         var (context, factory) = TestUtilities.CreateContext();
         var actionService = new ActionService(factory);
-        var dataService = new DataService(factory, actionService);
+        var dataAnnotationService = new DataAnnotationService(factory);
+        var dataService = new DataService(factory, dataAnnotationService, actionService);
 
         await dataService.CreateDataEntryAsync("Case2", "Id_Post", [string.Empty], ["Customers", "Customers_Customer1"]);
 
@@ -116,7 +123,8 @@ public class DataServiceTest
     {
         var (context, factory) = TestUtilities.CreateContext();
         var actionService = new ActionService(factory);
-        var dataService = new DataService(factory, actionService);
+        var dataAnnotationService = new DataAnnotationService(factory);
+        var dataService = new DataService(factory, dataAnnotationService, actionService);
 
         await dataService.CreateDataEntryAsync("Case1", "Id", null, new List<string>() { { "Customers" }, { "Customers_Customer1" } });
         await dataService.CreateDataEntryAsync("Case1", "Id", null, new List<string>() { { "Customers" }, { "Customers_Customer2" } });
@@ -129,5 +137,23 @@ public class DataServiceTest
 
         Assert.InRange(entry2.SingleOrDefault().Value.Length, 18, 19);
         Assert.Matches(@"^\d+$", entry2?.Single()?.Value);
+    }
+
+    [Fact]
+    public async Task CreateMultipleEntriesWithTagAndIdAsync_CheckTags()
+    {
+        var (context, factory) = TestUtilities.CreateContext();
+        var actionService = new ActionService(factory);
+        var dataAnnotationService = new DataAnnotationService(factory);
+        var dataService = new DataService(factory, dataAnnotationService, actionService);
+
+        var newTag = await dataService.CreateDataEntryWithTagAndIdAsync("Case1", "Customers", "Id", null);
+        var newTagWithCustomers = await dataService.CreateDataEntryWithTagAndIdAsync("Case1", "Customers", "Id", ["Customers"]);
+
+        var idEntriesFromCase1 = await dataService.GetDataEntriesAsync(context, "Case1", "Id", [newTag]);
+        var idEntriesFromCase1WithCustomerSet = await dataService.GetDataEntriesAsync(context, "Case1", "Id", [newTagWithCustomers]);
+
+        Assert.Equal(2, idEntriesFromCase1.Single().Tags.Count);
+        Assert.Equal(2, idEntriesFromCase1WithCustomerSet.Single().Tags.Count);
     }
 }

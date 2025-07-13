@@ -47,6 +47,29 @@ public class DataEntriesController(DataService _dataService, IDbContextFactory<A
         return NoContent();
     }
 
+    [HttpPost("{caseName}/multiple/{topTag}")]
+    public async Task<ActionResult<object>> CreateMultipleEntriesWithTagAndIdAsync([FromRoute] string caseName, [FromRoute] string topTag, [FromQuery] string idDataDefinitionName, [FromBody] List<CreateMultipleEntriesDto> dtos)
+    {
+        await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
+        {
+            var newTag = await _dataService.CreateDataEntryWithTagAndIdAsync(caseName, topTag, idDataDefinitionName, dtos.SingleOrDefault(x => x.DefinitionName == idDataDefinitionName)?.Tags);
+
+            foreach (var dto in dtos.Where(x => x.DefinitionName != idDataDefinitionName))
+            {
+                if (dto.Tags == null)
+                    dto.Tags = new List<string>();
+
+                if (!dto.Tags.Contains(topTag))
+                    dto.Tags.Add(topTag);
+
+                dto.Tags.Add(newTag);
+                await _dataService.CreateDataEntryAsync(caseName, dto.DefinitionName, dto.Values, dto.Tags);
+            }
+        });
+
+        return NoContent();
+    }
+
     [HttpPut("{caseName}/{entryId:long}")]
     public async Task<ActionResult<object>> UpdateEntryAsync([FromRoute] string caseName, [FromRoute] long entryId, [FromBody] UpdateEntryDto dto)
     {

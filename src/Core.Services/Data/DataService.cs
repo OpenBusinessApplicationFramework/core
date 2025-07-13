@@ -9,7 +9,7 @@ using ValueType = Core.Models.Data.ValueType;
 
 namespace Core.Services.Data;
 
-public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFactory, ActionService _actionService)
+public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFactory, DataAnnotationService _dataAnnotationService, ActionService _actionService)
 {
     public IQueryable<DataDefinition>? GetDataDefinitions(ApplicationDbContext db, string caseName, string? definitionName = null)
     {
@@ -122,7 +122,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         return results;
     }
 
-    public async Task CreateDataEntryAsync(string caseName, string dataDefinitionName, List<string>? values, List<string>? tags = null)
+    public async Task<(long id, object value)> CreateDataEntryAsync(string caseName, string dataDefinitionName, List<string>? values, List<string>? tags = null)
     {
         await using var db = await _dbContextFactory.CreateDbContextAsync();
 
@@ -183,20 +183,50 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
 
         if (def.CalculateType == CalculateType.OnInsert && !string.IsNullOrWhiteSpace(def.ActionForCalculated))
             await new ActionExecuteService(_dbContextFactory, this).ExecuteActionAsync(caseName, def.ActionForCalculated, entry.Id);
+
+        return (entry.Id, ParseValueInRightObject(entry));
     }
 
-    public async Task UpdateDataEntryAsync(string caseName, long entryId, List<string> values, List<string>? tags = null, bool skipCalculated = false)
+    public async Task<string> CreateDataEntryWithTagAndIdAsync(string caseName, string topTag, string idDataDefinitionName, List<string>? tags = null)
+    {
+        if ((await GetDataDefinitions(await _dbContextFactory.CreateDbContextAsync(), caseName, idDataDefinitionName)!.SingleAsync()).ValueType != Models.Data.ValueType.UniqueIdentifier)
+            throw new InvalidOperationException($"The data definition '{idDataDefinitionName}' is not of type UniqueIdentifier.");
+
+        if (tags == null)
+            tags = new List<string>();
+
+        if (!tags.Contains(topTag))
+            tags.Add(topTag);
+
+        var result = await CreateDataEntryAsync(caseName, idDataDefinitionName, [], tags);
+
+        if (result.value is not string)
+            throw new InvalidOperationException($"The data definition '{idDataDefinitionName}' with id {result.id} cannot have MultipleValues enabled, because it is of type UniqueIdentifier.");
+
+        string newTag = $"{topTag}_{result.value}";
+        tags.Add(newTag);
+
+        await _dataAnnotationService.CreateTagAsync(caseName, new Tag { Name = newTag, Description = newTag, UniqueDefinition = true });
+
+        await UpdateDataEntryAsync(caseName, result.id, null, tags, true);
+
+        return newTag;
+    }
+
+    public async Task UpdateDataEntryAsync(string caseName, long entryId, List<string>? values = null, List<string>? tags = null, bool skipCalculated = false)
     {
         await using var db = await _dbContextFactory.CreateDbContextAsync();
 
         var entry = await db.DataEntries.Include(e => e.DataDefinition).Include(e => e.Tags).Include(e => e.Case).SingleOrDefaultAsync(e => e.Id == entryId && e.Case.Name == caseName) ?? throw new InvalidOperationException($"DataEntry with id {entryId} not found.");
 
         var def = entry.DataDefinition;
-        entry.Values = values.ToList();
+
+        if (values != null)
+            entry.Values = values.ToList();
 
         if (tags != null)
         {
-            var newTags = await db.Tags.Where(t => tags.Contains(t.Name)).ToListAsync();
+            var newTags = await db.Tags.Include(x => x.Case).Where(t => t.Case.Name == caseName && tags.Contains(t.Name)).ToListAsync();
             entry.Tags = newTags;
         }
 
