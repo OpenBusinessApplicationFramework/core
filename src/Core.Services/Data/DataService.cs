@@ -142,9 +142,9 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
                 throw new InvalidOperationException($"The tag '{tag.Name}' is defined as unique and already holds data for the definition '{def.Name}'.");
         }
 
-        var invalidTag = tagsToAdd.FirstOrDefault(tag => tag.AllowedDataDefinitions != null && !tag.AllowedDataDefinitions.Contains(def.Name));
-        if (invalidTag != null)
-            throw new Exception($"DataDefinition {def.Name} is not allowed in tag {invalidTag.Name}!");
+        var invalidTags = tagsToAdd.Where(tag => tag.AllowedDataDefinitions != null && !tag.AllowedDataDefinitions.Contains(def.Name)).ToList();
+        if (invalidTags.Any())
+            throw new Exception($"DataDefinition '{def.Name}' is not allowed in the following tags: {string.Join(", ", invalidTags.Select(t => t.Name))}");
 
         var initValue = string.IsNullOrWhiteSpace(def.InitialValue) ? (values ?? new List<string>()) : [def.InitialValue];
 
@@ -182,7 +182,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         }
 
         if (def.CalculateType == CalculateType.OnInsert && !string.IsNullOrWhiteSpace(def.ActionForCalculated))
-            await new ActionExecuteService(_dbContextFactory, this).ExecuteActionAsync(caseName, def.ActionForCalculated, entry.Id);
+            await new ActionExecuteService(_dbContextFactory, this, _dataAnnotationService).ExecuteActionAsync(caseName, def.ActionForCalculated, entry.Id);
 
         return (entry.Id, ParseValueInRightObject(entry));
     }
@@ -230,9 +230,9 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
             entry.Tags = newTags;
         }
 
-        var invalidTag = entry.Tags.FirstOrDefault(tag => tag.AllowedDataDefinitions != null && !tag.AllowedDataDefinitions.Contains(def.Name));
-        if (invalidTag != null)
-            throw new Exception($"DataDefinition {def.Name} is not allowed in tag {invalidTag.Name}!");
+        var invalidTags = entry.Tags.Where(tag => tag.AllowedDataDefinitions != null && !tag.AllowedDataDefinitions.Contains(def.Name)).ToList();
+        if (invalidTags.Any())
+            throw new Exception($"DataDefinition '{def.Name}' is not allowed in the following tags: {string.Join(", ", invalidTags.Select(t => t.Name))}");
 
         if (def.ReadOnly)
             throw new Exception("The entry can't be changed as it is readonly.");
@@ -253,14 +253,14 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         await db.SaveChangesAsync();
 
         if (def.CalculateType == CalculateType.OnInsert && !string.IsNullOrWhiteSpace(def.ActionForCalculated) && !skipCalculated)
-            await new ActionExecuteService(_dbContextFactory, this).ExecuteActionAsync(entry.Case.Name, def.ActionForCalculated, entry.Id);
+            await new ActionExecuteService(_dbContextFactory, this, _dataAnnotationService).ExecuteActionAsync(entry.Case.Name, def.ActionForCalculated, entry.Id);
     }
 
-    public async Task DeleteDataEntryAsync(long entryId)
+    public async Task DeleteDataEntryAsync(string caseName, long entryId)
     {
         await using var db = await _dbContextFactory.CreateDbContextAsync();
 
-        var entry = await db.DataEntries.FindAsync(entryId) ?? throw new InvalidOperationException($"DataEntry with id {entryId} not found.");
+        var entry = await db.DataEntries.Include(e => e.Case).SingleAsync(x => x.Case.Name == caseName && x.Id == entryId) ?? throw new InvalidOperationException($"DataEntry with id {entryId} not found.");
 
         db.DataEntries.Remove(entry);
         await db.SaveChangesAsync();
@@ -271,9 +271,9 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         var def = entry.DataDefinition;
 
         if (def.CalculateType == CalculateType.OnCall && !string.IsNullOrWhiteSpace(def.ActionForCalculated))
-            await new ActionExecuteService(_dbContextFactory, this).ExecuteActionAsync(entry.Case.Name, def.ActionForCalculated, entry.Id);
+            await new ActionExecuteService(_dbContextFactory, this, _dataAnnotationService).ExecuteActionAsync(entry.Case.Name, def.ActionForCalculated, entry.Id);
 
-        var newEntry = await (await _dbContextFactory.CreateDbContextAsync()).DataEntries.Include(x => x.DataDefinition).SingleAsync(x => x.Id == entry.Id);
+        var newEntry = await (await _dbContextFactory.CreateDbContextAsync()).DataEntries.Include(e => e.Case).Include(e => e.DataDefinition).SingleAsync(x => x.Case.Name == entry.Case.Name && x.Id == entry.Id);
 
         return ParseValueInRightObject(newEntry!);
     }

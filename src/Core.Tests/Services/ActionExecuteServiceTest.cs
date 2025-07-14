@@ -18,7 +18,7 @@ public class ActionExecuteServiceTest
         var actionService = new ActionService(factory);
         var dataAnnotationService = new DataAnnotationService(factory);
         var dataService = new DataService(factory, dataAnnotationService, actionService);
-        var actionExecuteService = new ActionExecuteService(factory, dataService);
+        var actionExecuteService = new ActionExecuteService(factory, dataService, dataAnnotationService);
 
         await actionExecuteService.ExecuteActionAsync("Case2", "Customer1_namechange", null);
 

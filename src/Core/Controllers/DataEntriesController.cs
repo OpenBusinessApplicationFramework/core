@@ -81,12 +81,12 @@ public class DataEntriesController(DataService _dataService, IDbContextFactory<A
         return NoContent();
     }
 
-    [HttpDelete("{entryId:long}")]
-    public async Task<IActionResult> DeleteEntryAsync([FromRoute] long entryId)
+    [HttpDelete("{caseName}/{entryId:long}")]
+    public async Task<IActionResult> DeleteEntryAsync([FromRoute] string caseName, [FromRoute] long entryId)
     {
         await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
         {
-            await _dataService.DeleteDataEntryAsync(entryId);
+            await _dataService.DeleteDataEntryAsync(caseName, entryId);
         });
 
         return NoContent();
