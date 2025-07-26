@@ -30,7 +30,14 @@ public class DataAnnotationService(IDbContextFactory<ApplicationDbContext> _dbCo
         return tag;
     }
 
-    public async Task<Tag> UpdateTagAsync(string caseName, string name, string? description = null, bool? uniqueDefinition = null, string? newName = null)
+    public async Task<Tag> UpdateTagAsync(string caseName, 
+                                          string name, 
+                                          string? description = null, 
+                                          bool? uniqueDefinition = null, 
+                                          string? defaultIdentifierDefinition = null,
+                                          List<string>? allowedDataDefinitions = null,
+                                          List<string>? allowedActions = null,
+                                          string? newName = null)
     {
         await using var db = await _dbContextFactory.CreateDbContextAsync();
         var existing = await db.Tags.Include(d => d.Case).FirstOrDefaultAsync(d => d.Case.Name == caseName && d.Name == name);
@@ -43,6 +50,15 @@ public class DataAnnotationService(IDbContextFactory<ApplicationDbContext> _dbCo
 
         if (uniqueDefinition != null)
             existing.UniqueDefinition = (bool)uniqueDefinition;
+
+        if (defaultIdentifierDefinition != null)
+            existing.DefaultIdentifierDefinition = defaultIdentifierDefinition;
+
+        if (allowedDataDefinitions != null)
+            existing.AllowedDataDefinitions = allowedDataDefinitions;
+
+        if (allowedActions != null)
+            existing.AllowedActions = allowedActions;
 
         if (newName != null)
             existing.Name = newName;

@@ -13,7 +13,7 @@ public static class TestDataSeeder
         //Case1
         var case1 = new Case { Name = "Case1", Description = "Test Case" };
 
-        var tagCustomers = new Tag { Name = "Customers", Description = "Collection of customers", Case = case1 };
+        var tagCustomers = new Tag { Name = "Customers", Description = "Collection of customers", DefaultIdentifierDefinition = "Id", Case = case1 };
         var tagCustomer1 = new Tag { Name = "Customers_Customer1", Description = "Customer1", Case = case1, UniqueDefinition = true };
         var tagCustomer2 = new Tag { Name = "Customers_Customer2", Description = "Customer2", Case = case1, UniqueDefinition = true };
 

@@ -187,8 +187,19 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         return (entry.Id, ParseValueInRightObject(entry));
     }
 
-    public async Task<string> CreateDataEntryWithTagAndIdAsync(string caseName, string topTag, string idDataDefinitionName, List<string>? tags = null)
+    public async Task<string> FindOutIdDataDefinitionNameAsync(string caseName, string topTag, string? idDataDefinitionName = null)
     {
+        if (string.IsNullOrWhiteSpace(idDataDefinitionName))
+            idDataDefinitionName = (await _dataAnnotationService.GetTags(await _dbContextFactory.CreateDbContextAsync(), caseName)!.SingleOrDefaultAsync(x => x.Name == topTag) ?? throw new InvalidOperationException($"Tag {topTag} couldn't be found")).DefaultIdentifierDefinition;
+
+        return idDataDefinitionName ?? throw new Exception("Can't figure out IdDataDefinitionName");
+    }
+
+    public async Task<string> CreateDataEntryWithTagAndIdAsync(string caseName, string topTag, string? idDataDefinitionName = null, List<string>? tags = null)
+    {
+        if (string.IsNullOrWhiteSpace(idDataDefinitionName))
+            idDataDefinitionName = await FindOutIdDataDefinitionNameAsync(caseName, topTag, idDataDefinitionName);
+
         if ((await GetDataDefinitions(await _dbContextFactory.CreateDbContextAsync(), caseName, idDataDefinitionName)!.SingleAsync()).ValueType != Models.Data.ValueType.UniqueIdentifier)
             throw new InvalidOperationException($"The data definition '{idDataDefinitionName}' is not of type UniqueIdentifier.");
 
@@ -206,7 +217,9 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         string newTag = $"{topTag}_{result.value}";
         tags.Add(newTag);
 
-        await _dataAnnotationService.CreateTagAsync(caseName, new Tag { Name = newTag, Description = newTag, UniqueDefinition = true });
+        var topTagEntity = await _dataAnnotationService.GetTags(await _dbContextFactory.CreateDbContextAsync(), caseName)!.SingleOrDefaultAsync(x => x.Name == topTag) ?? throw new InvalidOperationException($"Tag {topTag} couldn't be found");
+
+        await _dataAnnotationService.CreateTagAsync(caseName, new Tag { Name = newTag, Description = newTag, UniqueDefinition = true, DefaultIdentifierDefinition = topTagEntity.DefaultIdentifierDefinition, AllowedDataDefinitions = topTagEntity.AllowedDataDefinitions, AllowedActions = topTagEntity.AllowedActions });
 
         await UpdateDataEntryAsync(caseName, result.id, null, tags, true);
 
@@ -234,7 +247,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         if (invalidTags.Any())
             throw new Exception($"DataDefinition '{def.Name}' is not allowed in the following tags: {string.Join(", ", invalidTags.Select(t => t.Name))}");
 
-        if (def.ReadOnly)
+        if (def.ReadOnly && values != null)
             throw new Exception("The entry can't be changed as it is readonly.");
 
 

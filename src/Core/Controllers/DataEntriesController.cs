@@ -48,10 +48,11 @@ public class DataEntriesController(DataService _dataService, IDbContextFactory<A
     }
 
     [HttpPost("{caseName}/multiple/{topTag}")]
-    public async Task<ActionResult<object>> CreateMultipleEntriesWithTagAndIdAsync([FromRoute] string caseName, [FromRoute] string topTag, [FromQuery] string idDataDefinitionName, [FromBody] List<CreateMultipleEntriesDto> dtos)
+    public async Task<ActionResult<object>> CreateMultipleEntriesWithTagAndIdAsync([FromRoute] string caseName, [FromRoute] string topTag, [FromBody] List<CreateMultipleEntriesDto> dtos, [FromQuery] string? idDataDefinitionName = null)
     {
         await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
         {
+            idDataDefinitionName = await _dataService.FindOutIdDataDefinitionNameAsync(caseName, topTag, idDataDefinitionName);
             var newTag = await _dataService.CreateDataEntryWithTagAndIdAsync(caseName, topTag, idDataDefinitionName, dtos.SingleOrDefault(x => x.DefinitionName == idDataDefinitionName)?.Tags);
 
             foreach (var dto in dtos.Where(x => x.DefinitionName != idDataDefinitionName))

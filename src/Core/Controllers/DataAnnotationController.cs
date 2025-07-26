@@ -28,13 +28,19 @@ public class DataAnnotationController(DataAnnotationService _dataAnnotationServi
     public async Task<ActionResult> CreateTagAsync([FromRoute] string caseName,
         [FromForm] string name,
         [FromForm] string description,
-        [FromForm] bool uniqueDefinition)
+        [FromForm] bool uniqueDefinition,
+        [FromForm] string? defaultIdentifierDefinition = null,
+        [FromForm] List<string>? allowedDataDefinitions = null,
+        [FromForm] List<string>? allowedActions = null)
     {
         var tag = new Tag
         {
             Name = name,
             Description = description,
-            UniqueDefinition = uniqueDefinition
+            UniqueDefinition = uniqueDefinition,
+            DefaultIdentifierDefinition = defaultIdentifierDefinition,
+            AllowedDataDefinitions = allowedDataDefinitions,
+            AllowedActions = allowedActions
         };
 
         await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
@@ -50,11 +56,14 @@ public class DataAnnotationController(DataAnnotationService _dataAnnotationServi
         [FromForm] string name,
         [FromForm] string? description = null,
         [FromForm] bool? uniqueDefinition = null,
+        [FromForm] string? defaultIdentifierDefinition = null,
+        [FromForm] List<string>? allowedDataDefinitions = null,
+        [FromForm] List<string>? allowedActions = null,
         [FromForm] string? newName = null)
     {
         await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
         {
-            await _dataAnnotationService.UpdateTagAsync(caseName, name, description, uniqueDefinition, newName);
+            await _dataAnnotationService.UpdateTagAsync(caseName, name, description, uniqueDefinition, defaultIdentifierDefinition, allowedDataDefinitions, allowedActions, newName);
         });
 
         return NoContent();

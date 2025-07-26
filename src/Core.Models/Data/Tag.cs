@@ -12,6 +12,8 @@ public class Tag : CommonDefinition
 
     public bool UniqueDefinition { get; set; } = false;
 
+    public string? DefaultIdentifierDefinition { get; set; }
+
     public List<string>? AllowedDataDefinitions { get; set; }
     public List<string>? AllowedActions { get; set; }
 

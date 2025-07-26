@@ -148,7 +148,7 @@ public class DataServiceTest
         var dataService = new DataService(factory, dataAnnotationService, actionService);
 
         var newTag = await dataService.CreateDataEntryWithTagAndIdAsync("Case1", "Customers", "Id", null);
-        var newTagWithCustomers = await dataService.CreateDataEntryWithTagAndIdAsync("Case1", "Customers", "Id", ["Customers"]);
+        var newTagWithCustomers = await dataService.CreateDataEntryWithTagAndIdAsync("Case1", "Customers", null, ["Customers"]);
 
         var idEntriesFromCase1 = await dataService.GetDataEntriesAsync(context, "Case1", "Id", [newTag]);
         var idEntriesFromCase1WithCustomerSet = await dataService.GetDataEntriesAsync(context, "Case1", "Id", [newTagWithCustomers]);
