@@ -31,7 +31,9 @@ public class DataAnnotationController(DataAnnotationService _dataAnnotationServi
         [FromForm] bool uniqueDefinition,
         [FromForm] string? defaultIdentifierDefinition = null,
         [FromForm] List<string>? allowedDataDefinitions = null,
-        [FromForm] List<string>? allowedActions = null)
+        [FromForm] List<string>? allowedActions = null,
+        [FromForm] List<string>? allowedSubDataDefinitions = null,
+        [FromForm] List<string>? allowedSubActions = null)
     {
         var tag = new Tag
         {
@@ -39,8 +41,10 @@ public class DataAnnotationController(DataAnnotationService _dataAnnotationServi
             Description = description,
             UniqueDefinition = uniqueDefinition,
             DefaultIdentifierDefinition = defaultIdentifierDefinition,
+            AllowedActions = allowedActions,
             AllowedDataDefinitions = allowedDataDefinitions,
-            AllowedActions = allowedActions
+            AllowedSubActions = allowedSubActions,
+            AllowedSubDataDefinitions = allowedSubDataDefinitions
         };
 
         await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
@@ -59,11 +63,13 @@ public class DataAnnotationController(DataAnnotationService _dataAnnotationServi
         [FromForm] string? defaultIdentifierDefinition = null,
         [FromForm] List<string>? allowedDataDefinitions = null,
         [FromForm] List<string>? allowedActions = null,
+        [FromForm] List<string>? allowedSubDataDefinitions = null,
+        [FromForm] List<string>? allowedSubActions = null,
         [FromForm] string? newName = null)
     {
         await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
         {
-            await _dataAnnotationService.UpdateTagAsync(caseName, name, description, uniqueDefinition, defaultIdentifierDefinition, allowedDataDefinitions, allowedActions, newName);
+            await _dataAnnotationService.UpdateTagAsync(caseName, name, description, uniqueDefinition, defaultIdentifierDefinition, allowedDataDefinitions, allowedActions, allowedSubDataDefinitions, allowedSubActions, newName);
         });
 
         return NoContent();

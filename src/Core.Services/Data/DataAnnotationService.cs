@@ -37,6 +37,8 @@ public class DataAnnotationService(IDbContextFactory<ApplicationDbContext> _dbCo
                                           string? defaultIdentifierDefinition = null,
                                           List<string>? allowedDataDefinitions = null,
                                           List<string>? allowedActions = null,
+                                          List<string>? allowedSubDataDefinitions = null,
+                                          List<string>? allowedSubActions = null,
                                           string? newName = null)
     {
         await using var db = await _dbContextFactory.CreateDbContextAsync();
@@ -59,6 +61,12 @@ public class DataAnnotationService(IDbContextFactory<ApplicationDbContext> _dbCo
 
         if (allowedActions != null)
             existing.AllowedActions = allowedActions;
+
+        if (allowedSubDataDefinitions != null)
+            existing.AllowedSubDataDefinitions = allowedSubDataDefinitions;
+
+        if (allowedSubActions != null)
+            existing.AllowedSubActions = allowedSubActions;
 
         if (newName != null)
             existing.Name = newName;

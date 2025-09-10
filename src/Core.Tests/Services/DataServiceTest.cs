@@ -20,9 +20,9 @@ public class DataServiceTest
 
         var entries = await dataService.GetDataEntriesAsync(context, "Case1");
 
-        Assert.Equal(2, entries.Count);
-        Assert.Contains(entries, e => e.DataDefinition.Name == "Name");
-        Assert.Contains(entries, e => e.DataDefinition.Name == "Email_Verified");
+        Assert.Equal(2, entries.count);
+        Assert.Contains(entries.results, e => e.DataDefinition.Name == "Name");
+        Assert.Contains(entries.results, e => e.DataDefinition.Name == "Email_Verified");
     }
 
     [Fact]
@@ -35,8 +35,8 @@ public class DataServiceTest
 
         var entry = await dataService.GetDataEntriesAsync(context, "Case2");
 
-        Assert.Single(entry);
-        Assert.Contains(entry, e => e.DataDefinition.Name == "Name");
+        Assert.Single(entry.results);
+        Assert.Contains(entry.results, e => e.DataDefinition.Name == "Name");
     }
 
     [Fact]
@@ -49,7 +49,7 @@ public class DataServiceTest
 
         var entries = await dataService.GetDataEntriesAsync(context, "Case2", "Name", ["Customers_Customer1"]);
 
-        Assert.Equal("Test Person", entries.Single().Value);
+        Assert.Equal("Test Person", entries.results.Single().Value);
     }
 
     [Fact]
@@ -62,13 +62,13 @@ public class DataServiceTest
 
         var entryCase2 = await dataService.GetDataEntriesAsync(context, "Case2", "Name", ["Customers_Customer1"]);
 
-        await dataService.UpdateDataEntryAsync("Case2", entryCase2.Single().Id, ["Test Person Updated"]);
+        await dataService.UpdateDataEntryAsync("Case2", entryCase2.results.Single().Id, ["Test Person Updated"]);
 
         var entryCase1 = await dataService.GetDataEntriesAsync(context, "Case2", "Name", ["Customers_Customer1"]);
 
-        Assert.Single(entryCase1);
-        Assert.Single(entryCase2);
-        Assert.Equal("Test Person Updated", entryCase1.Single().Value);
+        Assert.Single(entryCase1.results);
+        Assert.Single(entryCase2.results);
+        Assert.Equal("Test Person Updated", entryCase1.results.Single().Value);
     }
 
     [Fact]
@@ -81,8 +81,8 @@ public class DataServiceTest
 
         var entry = await dataService.GetDataEntriesAsync(context, "Case1", "Name", getSubTagsFromTopTag: "Customers");
 
-        Assert.Single(entry);
-        Assert.Contains(entry, e => e.DataDefinition.Name == "Name");
+        Assert.Single(entry.results);
+        Assert.Contains(entry.results, e => e.DataDefinition.Name == "Name");
     }
 
     [Fact]
@@ -98,8 +98,8 @@ public class DataServiceTest
         var _ = await dataService.GetDataEntriesAsync(context, "Case2", "Id_Get", ["Customers", "Customers_Customer1"]);
         var entry = await dataService.GetDataEntriesAsync(context, "Case2", "Id_Get", ["Customers", "Customers_Customer1"]);
 
-        Assert.Single(entry);
-        Assert.Equal("123123", entry.Single().Value);
+        Assert.Single(entry.results);
+        Assert.Equal("123123", entry.results.Single().Value);
     }
 
     [Fact]
@@ -114,8 +114,8 @@ public class DataServiceTest
 
         var entry = await dataService.GetDataEntriesAsync(context, "Case2", "Id_Post", ["Customers", "Customers_Customer1"]);
 
-        Assert.Single(entry);
-        Assert.Equal("123", entry.Single().Value);
+        Assert.Single(entry.results);
+        Assert.Equal("123", entry.results.Single().Value);
     }
 
     [Fact]
@@ -132,11 +132,11 @@ public class DataServiceTest
         var entry1 = await dataService.GetDataEntriesAsync(context, "Case1", "Id", ["Customers_Customer1"]);
         var entry2 = await dataService.GetDataEntriesAsync(context, "Case1", "Id", ["Customers_Customer2"]);
 
-        Assert.InRange(entry1.SingleOrDefault().Value.Length, 18, 19);
-        Assert.Matches(@"^\d+$", entry1?.Single()?.Value);
+        Assert.InRange(entry1.results.SingleOrDefault().Value.Length, 18, 19);
+        Assert.Matches(@"^\d+$", entry1.results?.Single()?.Value);
 
-        Assert.InRange(entry2.SingleOrDefault().Value.Length, 18, 19);
-        Assert.Matches(@"^\d+$", entry2?.Single()?.Value);
+        Assert.InRange(entry2.results.SingleOrDefault().Value.Length, 18, 19);
+        Assert.Matches(@"^\d+$", entry2.results?.Single()?.Value);
     }
 
     [Fact]
@@ -153,7 +153,7 @@ public class DataServiceTest
         var idEntriesFromCase1 = await dataService.GetDataEntriesAsync(context, "Case1", "Id", [newTag]);
         var idEntriesFromCase1WithCustomerSet = await dataService.GetDataEntriesAsync(context, "Case1", "Id", [newTagWithCustomers]);
 
-        Assert.Equal(2, idEntriesFromCase1.Single().Tags.Count);
-        Assert.Equal(2, idEntriesFromCase1WithCustomerSet.Single().Tags.Count);
+        Assert.Equal(2, idEntriesFromCase1.results.Single().Tags.Count);
+        Assert.Equal(2, idEntriesFromCase1WithCustomerSet.results.Single().Tags.Count);
     }
 }

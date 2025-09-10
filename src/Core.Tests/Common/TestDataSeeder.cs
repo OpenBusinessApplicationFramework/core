@@ -38,8 +38,8 @@ public static class TestDataSeeder
 
         //Case2
         var case2 = new Case { Name = "Case2", Description = "Test Case" };
-        var tagCustomersCase2 = new Tag { Name = "Customers", Description = "Collection of customers", Case = case2 };
-        var tagCustomer1Case2 = new Tag { Name = "Customers_Customer1", Description = "Customer1", AllowedActions = ["Customer1_namechange"], Case = case2, UniqueDefinition = true };
+        var tagCustomersCase2 = new Tag { Name = "Customers", Description = "Collection of customers", AllowedSubActions = ["Customer1_namechange"], Case = case2 };
+        var tagCustomer1Case2 = new Tag { Name = "Customers_Customer1", Description = "Customer1", Case = case2, UniqueDefinition = true };
 
         var nameLinked = new DataDefinition { Name = "Name", ValueType = Models.Data.ValueType.Connected, ConnectionType = ConnectionType.Fulllink, PathForConnected = "Case1.{name}.Customers_Customer1", Case = case2 };
         var customerIdCalculatedAtGet = new DataDefinition { Name = "Id_Get", ValueType = Models.Data.ValueType.Calculated, ActionForCalculated = "CustomerId", CalculateType = CalculateType.OnCall, Case = case2 };

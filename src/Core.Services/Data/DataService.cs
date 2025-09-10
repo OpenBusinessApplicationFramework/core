@@ -70,7 +70,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         await db.SaveChangesAsync();
     }
 
-    public async Task<IList<DataEntry>> GetDataEntriesAsync(ApplicationDbContext db, string caseName, string? dataDefinitionName = null, string[]? tags = null, string? getSubTagsFromTopTag = null, string? globalFilter = null, bool skipCalculated = false)
+    public async Task<(IList<DataEntry> results, int count)> GetDataEntriesAsync(ApplicationDbContext db, string caseName, string? dataDefinitionName = null, string[]? tags = null, string? getSubTagsFromTopTag = null, string? globalFilter = null, bool skipCalculated = false, int? top = null, int? skip = null)
     {
         var query = db.DataEntries.Include(e => e.Case).Include(e => e.DataDefinition).Include(e => e.Tags).Where(e => e.Case.Name == caseName);
 
@@ -97,7 +97,35 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         if (!string.IsNullOrWhiteSpace(getSubTagsFromTopTag))
             query = query.Where(e => e.Tags.Any(t => t.Name.StartsWith($"{getSubTagsFromTopTag}_")));
 
-        var results = await query.ToListAsync();
+        var tagIdPageQuery = query.SelectMany(e => e.Tags.Where(t => t.UniqueDefinition)).Select(t => t.Id).Distinct().OrderBy(id => id);
+
+        if (skip.HasValue) 
+            tagIdPageQuery = tagIdPageQuery.Skip(skip.Value).OrderBy(id => id);
+        if (top.HasValue) 
+            tagIdPageQuery = tagIdPageQuery.Take(top.Value).OrderBy(id => id);
+
+        var pageTagIds = await tagIdPageQuery.ToListAsync();
+        List<DataEntry> results = new List<DataEntry>();
+        int? totalCount = null;
+
+        if (pageTagIds.Count == 0)
+        {
+            results = await query.ToListAsync();
+            totalCount = results.Count;
+        }
+        else
+        {
+            IQueryable<DataEntry> finalQuery = query
+                .Where(e => e.Tags.Any(t => t.UniqueDefinition && pageTagIds.Contains(t.Id)))
+                .OrderBy(e => e.Tags
+                    .Where(t => t.UniqueDefinition && pageTagIds.Contains(t.Id))
+                    .Select(t => t.Id)
+                    .Min())
+                .ThenBy(e => e.Id);
+
+            results = await finalQuery.ToListAsync();
+            totalCount = await query.SelectMany(e => e.Tags.Where(t => t.UniqueDefinition)).Select(t => t.Id).Distinct().CountAsync();
+        }
 
         foreach (var result in results)
         {
@@ -110,6 +138,8 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
                 ValueType.Calculated => skipCalculated ? ParseValueInRightObject(result) : await HandleCalculatedAsync(result),
                 ValueType.Connected => HandleConnected(await _dbContextFactory.CreateDbContextAsync(), result),
                 ValueType.UniqueIdentifier => ParseValueInRightObject(result),
+                ValueType.Select => ParseValueInRightObject(result),
+                ValueType.SubGrid => ParseValueInRightObject(result),
                 _ => throw new InvalidOperationException("Unknown ValueType.")
             };
 
@@ -119,10 +149,10 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
                 result.Value = (string)parsed;
         }
 
-        return results;
+        return (results, totalCount ?? -1);
     }
 
-    public async Task<(long id, object value)> CreateDataEntryAsync(string caseName, string dataDefinitionName, List<string>? values, List<string>? tags = null)
+    public async Task<(long id, object value)> CreateDataEntryAsync(string caseName, string dataDefinitionName, List<string>? values, List<string>? tags = null, bool? addAllowedTagsIfTopTagHasIt = false)
     {
         await using var db = await _dbContextFactory.CreateDbContextAsync();
 
@@ -142,7 +172,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
                 throw new InvalidOperationException($"The tag '{tag.Name}' is defined as unique and already holds data for the definition '{def.Name}'.");
         }
 
-        var invalidTags = tagsToAdd.Where(tag => tag.AllowedDataDefinitions != null && !tag.AllowedDataDefinitions.Contains(def.Name)).ToList();
+        var invalidTags = tagsToAdd.Where(tag => tag.AllowedDataDefinitions != null && !(tag.AllowedDataDefinitions.Contains(def.Name) || tag.AllowedSubDataDefinitions != null && tag.AllowedSubDataDefinitions.Contains(def.Name))).ToList();
         if (invalidTags.Any())
             throw new Exception($"DataDefinition '{def.Name}' is not allowed in the following tags: {string.Join(", ", invalidTags.Select(t => t.Name))}");
 
@@ -219,7 +249,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
 
         var topTagEntity = await _dataAnnotationService.GetTags(await _dbContextFactory.CreateDbContextAsync(), caseName)!.SingleOrDefaultAsync(x => x.Name == topTag) ?? throw new InvalidOperationException($"Tag {topTag} couldn't be found");
 
-        await _dataAnnotationService.CreateTagAsync(caseName, new Tag { Name = newTag, Description = newTag, UniqueDefinition = true, DefaultIdentifierDefinition = topTagEntity.DefaultIdentifierDefinition, AllowedDataDefinitions = topTagEntity.AllowedDataDefinitions, AllowedActions = topTagEntity.AllowedActions });
+        await _dataAnnotationService.CreateTagAsync(caseName, new Tag { Name = newTag, Description = newTag, UniqueDefinition = true, DefaultIdentifierDefinition = topTagEntity.DefaultIdentifierDefinition });
 
         await UpdateDataEntryAsync(caseName, result.id, null, tags, true);
 
@@ -243,7 +273,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
             entry.Tags = newTags;
         }
 
-        var invalidTags = entry.Tags.Where(tag => tag.AllowedDataDefinitions != null && !tag.AllowedDataDefinitions.Contains(def.Name)).ToList();
+        var invalidTags = entry.Tags.Where(tag => tag.AllowedDataDefinitions != null && !(tag.AllowedDataDefinitions.Contains(def.Name) || tag.AllowedSubDataDefinitions != null && tag.AllowedSubDataDefinitions.Contains(def.Name))).ToList();
         if (invalidTags.Any())
             throw new Exception($"DataDefinition '{def.Name}' is not allowed in the following tags: {string.Join(", ", invalidTags.Select(t => t.Name))}");
 

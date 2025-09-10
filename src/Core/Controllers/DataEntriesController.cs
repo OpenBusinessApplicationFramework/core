@@ -13,13 +13,15 @@ namespace Core.Controllers;
 public class DataEntriesController(DataService _dataService, IDbContextFactory<ApplicationDbContext> _dbContextFactory) : ControllerBase
 {
     [HttpGet("{caseName}/inmemoryodata")]
-    public async Task<ActionResult<IQueryable<DataEntry>>> GetEntriesAsync(ODataQueryOptions<DataEntry> queryOptions, [FromRoute] string caseName, [FromQuery] string? definitionName = null, [FromQuery] string[]? tags = null, [FromQuery] string? getSubTagsFromTopTag = null, [FromQuery] string? globalFilter = null)
+    public async Task<ActionResult<IQueryable<DataEntry>>> GetEntriesAsync(ODataQueryOptions<DataEntry> queryOptions, [FromRoute] string caseName, [FromQuery] string? definitionName = null, [FromQuery] string[]? tags = null, [FromQuery] string? getSubTagsFromTopTag = null, [FromQuery] string? globalFilter = null, [FromQuery] int? tagTop = null, [FromQuery] int? tagSkip = null)
     {
         var db = await _dbContextFactory.CreateDbContextAsync();
 
-        var entries = await _dataService.GetDataEntriesAsync(db, caseName, definitionName, tags, getSubTagsFromTopTag, globalFilter);
+        var entries = await _dataService.GetDataEntriesAsync(db, caseName, definitionName, tags, getSubTagsFromTopTag, globalFilter, top: tagTop, skip: tagSkip);
 
-        return Ok(queryOptions.ApplyTo(entries.AsQueryable()));
+        Response.Headers["X-Total-Count"] = entries.count.ToString();
+
+        return Ok(queryOptions.ApplyTo(entries.results.AsQueryable()));
     }
 
     [HttpPost("{caseName}/single/{definitionName}")]

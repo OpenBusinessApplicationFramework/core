@@ -41,11 +41,11 @@ public class ActionsController(ActionService _actionService, DataService _dataSe
     }
 
     [HttpPost("{caseName}/{actionName}/execute")]
-    public async Task<IActionResult> ExecuteActionAsync([FromRoute] string caseName, [FromRoute] string actionName)
+    public async Task<IActionResult> ExecuteActionAsync([FromRoute] string caseName, [FromRoute] string actionName, [FromRoute] List<string>? tagArguments, [FromRoute] Dictionary<string,string>? arguments)
     {
         await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
         {
-            await new ActionExecuteService(_dbContextFactory, _dataService, _dataAnnotationService).ExecuteActionAsync(caseName, actionName, null);
+            await new ActionExecuteService(_dbContextFactory, _dataService, _dataAnnotationService).ExecuteActionAsync(caseName, actionName, null, tagArguments, arguments);
         });
 
         return NoContent();

@@ -45,7 +45,8 @@ builder.Services.AddCors(options =>
             .WithOrigins(builder.Configuration["UIFrontendURI"] ?? Environment.GetEnvironmentVariable("UI_FRONTEND_URI") ?? throw new Exception("'UI_FRONTEND_URI' not set"))
             .AllowAnyHeader()
             .AllowAnyMethod()
-            .AllowCredentials();
+            .AllowCredentials()
+            .WithExposedHeaders("X-Total-Count");
     });
 });
 

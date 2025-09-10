@@ -17,5 +17,8 @@ public class Tag : CommonDefinition
     public List<string>? AllowedDataDefinitions { get; set; }
     public List<string>? AllowedActions { get; set; }
 
+    public List<string>? AllowedSubDataDefinitions { get; set; }
+    public List<string>? AllowedSubActions { get; set; }
+
     public Collection<DataEntry> DataEntries { get; set; } = new();
 }

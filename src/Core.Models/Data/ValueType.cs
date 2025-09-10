@@ -5,5 +5,7 @@ public enum ValueType
     Static,
     Calculated,
     Connected,
-    UniqueIdentifier
+    UniqueIdentifier,
+    Select,
+    SubGrid
 }

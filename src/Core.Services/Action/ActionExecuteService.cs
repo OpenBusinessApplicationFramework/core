@@ -3,12 +3,13 @@ using Core.Models.Data;
 using Core.Services.Data;
 using Jint;
 using Microsoft.EntityFrameworkCore;
+using System.Linq;
 
 namespace Core.Services.Action;
 
 public class ActionExecuteService(IDbContextFactory<ApplicationDbContext> _dbContextFactory, DataService _dataService, DataAnnotationService _dataAnnotationService)
 {
-    public async Task ExecuteActionAsync(string caseName, string actionName, long? entryIdToCalculate = null)
+    public async Task ExecuteActionAsync(string caseName, string actionName, long? entryIdToCalculate = null, List<string>? tagArguments = null, Dictionary<string, string>? arguments = null)
     {
         await using var db = await _dbContextFactory.CreateDbContextAsync();
 
@@ -32,16 +33,46 @@ public class ActionExecuteService(IDbContextFactory<ApplicationDbContext> _dbCon
             skipCalculatedAtEntriesLoad = entry.DataDefinition.CalculateType == CalculateType.OnCall;
         }
 
-        var allEntries = (await _dataService.GetDataEntriesAsync(db, caseName, null, actionDef.TagUsedInAction.ToArray(), skipCalculated: skipCalculatedAtEntriesLoad)).ToList();
+        if (arguments != null && arguments.Any())
+        {
+            foreach (var item in arguments)
+            {
+                if (!actionDef.ValueViaArgument!.Contains(item.Key))
+                    throw new Exception($"ValueViaArgument doesn't contain {item.Key}");
 
-        foreach (var tagName in actionDef.TagUsedInAction)
+                engine.SetValue(item.Key, item.Value);
+            }
+        }
+
+        var allArgumentsFromTags = actionDef.TagUsedInAction ?? new List<string>();
+        if (tagArguments != null)
+        {
+            foreach (var argument in tagArguments)
+            {
+                string topTagName = argument.Split("_")[argument.Split("_").Length - 2];
+                if (!(actionDef.TagViaArgument!.Contains(argument) || actionDef.TagViaArgument!.Contains(topTagName)))
+                    throw new Exception($"TagViaArgument doesn't contain {argument}");
+
+                allArgumentsFromTags.Add(argument);
+            }
+        }
+            
+
+        var allEntries = (await _dataService.GetDataEntriesAsync(db, caseName, null, allArgumentsFromTags.ToArray(), skipCalculated: skipCalculatedAtEntriesLoad)).results.ToList();
+
+        foreach (var tagName in allArgumentsFromTags)
         {
             if (tagName.Equals("math", StringComparison.OrdinalIgnoreCase) || tagName.Equals("CalculatedDataEntry", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException($"Dataset name '{tagName}' is reserved and can't be used.");
 
             var tag = await _dataAnnotationService.GetTags(await _dbContextFactory.CreateDbContextAsync(), caseName)!.SingleAsync(x => x.Name == tagName);
             if (tag.AllowedActions == null || !tag.AllowedActions.Contains(actionName))
-                throw new InvalidOperationException($"Tag {tagName} is not allowed to be executed in action {actionName}.");
+            {
+                string topTagName = tagName.Split("_")[tagName.Split("_").Length - 2];
+                var topTag = await _dataAnnotationService.GetTags(await _dbContextFactory.CreateDbContextAsync(), caseName)!.SingleAsync(x => x.Name == topTagName);
+                if (topTag.AllowedSubActions == null || !topTag.AllowedSubActions.Contains(actionName))
+                    throw new InvalidOperationException($"Tag {tagName} / {topTagName} is not allowed to be executed in action {actionName}.");
+            }
 
             var entriesByTag = allEntries.Where(e => e.Tags.Any(t => t.Name.Equals(tagName, StringComparison.OrdinalIgnoreCase))).ToList();
 

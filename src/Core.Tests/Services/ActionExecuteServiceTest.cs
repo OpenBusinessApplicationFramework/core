@@ -24,7 +24,7 @@ public class ActionExecuteServiceTest
 
         var entry = await dataService.GetDataEntriesAsync(context, "Case2", "Name", ["Customers", "Customers_Customer1"]);
 
-        Assert.Single(entry);
-        Assert.Equal("Customer 1 newname", entry.Single().Value);
+        Assert.Single(entry.results);
+        Assert.Equal("Customer 1 newname", entry.results.Single().Value);
     }
 }

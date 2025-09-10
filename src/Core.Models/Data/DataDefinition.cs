@@ -1,5 +1,4 @@
 ﻿using Core.Models.Common;
-using System.Collections.ObjectModel;
 
 namespace Core.Models.Data;
 
@@ -20,19 +19,21 @@ public class DataDefinition : CommonDefinition
     public ConnectionType? ConnectionType { get; set; }
     public string? PathForConnected { get; set; }
 
+    public string? TagToSelect { get; set; }
+
+    public string? SubGridTopTag { get; set; }
+
     public bool IsValid =>
-        (ValueType == ValueType.Static
-            && string.IsNullOrWhiteSpace(ActionForCalculated)
-            && string.IsNullOrWhiteSpace(PathForConnected))
-        || (ValueType == ValueType.Calculated
+        (ValueType == ValueType.Calculated
             && CalculateType != null
-            && !string.IsNullOrWhiteSpace(ActionForCalculated)
-            && string.IsNullOrWhiteSpace(PathForConnected))
+            && !string.IsNullOrWhiteSpace(ActionForCalculated))
         || (ValueType == ValueType.Connected
             && ConnectionType != null
-            && !string.IsNullOrWhiteSpace(PathForConnected)
-            && string.IsNullOrWhiteSpace(ActionForCalculated))
-        || (ValueType == ValueType.UniqueIdentifier
-            && string.IsNullOrWhiteSpace(PathForConnected)
-            && string.IsNullOrWhiteSpace(ActionForCalculated));
+            && !string.IsNullOrWhiteSpace(PathForConnected))
+        || (ValueType == ValueType.Select
+            && !string.IsNullOrWhiteSpace(TagToSelect))
+        || (ValueType == ValueType.SubGrid
+            && !string.IsNullOrWhiteSpace(SubGridTopTag))
+        || (ValueType == ValueType.Static)
+        || (ValueType == ValueType.UniqueIdentifier);
 }
