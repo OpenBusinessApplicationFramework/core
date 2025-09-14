@@ -35,13 +35,14 @@ This project is currently under active development. Please note the following:
 | Conceptual design                     | Late Q1 2025   | &#x2705; Done       |
 | API Completion (v1)                   | Q2 2025        | &#x2705; Done       |
 | GUI Alpha (Auto-GUI)                  | Q3 2025        | &#x2699; In Progress|
-| OIDC & Key Vault Integration          | Q3 2025        | &#x23F3; Upcoming   |
-| Admin tool                            | Late Q3 2025   | &#x23F3; Upcoming   |
+| OIDC & Key Vault Integration          | Early Q4 2025  | &#x23F3; Upcoming   |
+| Admin tool (CLI)                      | -              | &#x274C; Cancled    |
+| Admin GUI Manager                     | Q4 2025        | &#x23F3; Upcoming   |
 | Migration to .NET 10                  | Q4 2025        | &#x23F3; Upcoming   |
-| Public Beta & Feedback Round          | Q4 2025        | &#x23F3; Upcoming   |
-| Full test coverage                    | Until Q4 2025  | &#x23F3; Upcoming   |
-| Full Documentation & Tutorials        | Late Q4 2025   | &#x23F3; Upcoming   |
-| Release                               | Late Q4 2025   | &#x23F3; Upcoming   |
+| Public Beta & Feedback Round          | Late Q4 2025   | &#x23F3; Upcoming   |
+| Full test coverage                    | Q1 2026        | &#x23F3; Upcoming   |
+| Full Documentation & Tutorials        | Q1 2026        | &#x23F3; Upcoming   |
+| Release                               | Q1 2026        | &#x23F3; Upcoming   |
 
 
 ## Contributing
