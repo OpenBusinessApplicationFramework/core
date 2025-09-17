@@ -9,7 +9,7 @@ namespace Core.Services.Action;
 
 public class ActionExecuteService(IDbContextFactory<ApplicationDbContext> _dbContextFactory, DataService _dataService, DataAnnotationService _dataAnnotationService)
 {
-    public async Task ExecuteActionAsync(string caseName, string actionName, long? entryIdToCalculate = null, List<string>? tagArguments = null, Dictionary<string, string>? arguments = null)
+    public async Task ExecuteActionAsync(string caseName, string actionName, long? entryIdToCalculate = null, List<string>? tagArguments = null, Dictionary<string, string>? arguments = null, string? callingSubTag = null)
     {
         await using var db = await _dbContextFactory.CreateDbContextAsync();
 
@@ -50,7 +50,7 @@ public class ActionExecuteService(IDbContextFactory<ApplicationDbContext> _dbCon
             foreach (var argument in tagArguments)
             {
                 string topTagName = argument.Split("_")[argument.Split("_").Length - 2];
-                if (!(actionDef.TagViaArgument!.Contains(argument) || actionDef.TagViaArgument!.Contains(topTagName)))
+                if (!(actionDef.TagViaArgument!.Any(t => t.Split(':')[0] == argument || t.Split(':')[0] == topTagName)))
                     throw new Exception($"TagViaArgument doesn't contain {argument}");
 
                 allArgumentsFromTags.Add(argument);
@@ -62,7 +62,7 @@ public class ActionExecuteService(IDbContextFactory<ApplicationDbContext> _dbCon
 
         foreach (var tagName in allArgumentsFromTags)
         {
-            if (tagName.Equals("math", StringComparison.OrdinalIgnoreCase) || tagName.Equals("CalculatedDataEntry", StringComparison.OrdinalIgnoreCase))
+            if (tagName.Equals("math", StringComparison.OrdinalIgnoreCase) || tagName.Equals("CalculatedDataEntry", StringComparison.OrdinalIgnoreCase) || tagName.Equals("callingSubTag", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException($"Dataset name '{tagName}' is reserved and can't be used.");
 
             var tag = await _dataAnnotationService.GetTags(await _dbContextFactory.CreateDbContextAsync(), caseName)!.SingleAsync(x => x.Name == tagName);
@@ -81,6 +81,9 @@ public class ActionExecuteService(IDbContextFactory<ApplicationDbContext> _dbCon
             foreach (var grp in grouped)
                 engine.SetValue($"{tagName}_{grp.Key}", grp.ToList());
         }
+
+        if (!string.IsNullOrWhiteSpace(callingSubTag))
+            engine.SetValue("callingSubTag", callingSubTag);
 
         try
         {

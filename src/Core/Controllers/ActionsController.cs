@@ -30,22 +30,23 @@ public class ActionsController(ActionService _actionService, DataService _dataSe
         [FromForm] string name,
         [FromForm] string actionFunction,
         [FromForm] List<string> tagUsedInAction,
-        [FromForm] List<string> dataSetUsedInAction)
+        [FromForm] List<string> tagViaArgument,
+        [FromForm] List<string> valueViaArgument)
     {
         await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
         {
-            await _actionService.CreateAsync(caseName, name, actionFunction, tagUsedInAction, dataSetUsedInAction);
+            await _actionService.CreateAsync(caseName, name, actionFunction, tagUsedInAction, tagViaArgument, valueViaArgument);
         });
 
         return NoContent();
     }
 
     [HttpPost("{caseName}/{actionName}/execute")]
-    public async Task<IActionResult> ExecuteActionAsync([FromRoute] string caseName, [FromRoute] string actionName, [FromRoute] List<string>? tagArguments, [FromRoute] Dictionary<string,string>? arguments)
+    public async Task<IActionResult> ExecuteActionAsync([FromRoute] string caseName, [FromRoute] string actionName, [FromForm] List<string>? tagArguments, [FromForm] Dictionary<string,string>? arguments, string? callingSubTag = null)
     {
         await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
         {
-            await new ActionExecuteService(_dbContextFactory, _dataService, _dataAnnotationService).ExecuteActionAsync(caseName, actionName, null, tagArguments, arguments);
+            await new ActionExecuteService(_dbContextFactory, _dataService, _dataAnnotationService).ExecuteActionAsync(caseName, actionName, null, tagArguments, arguments, callingSubTag);
         });
 
         return NoContent();
@@ -55,12 +56,13 @@ public class ActionsController(ActionService _actionService, DataService _dataSe
     public async Task<ActionResult<ActionDefinition>> UpdateAsync([FromRoute] string caseName, [FromRoute] string actionName,
         [FromForm] string actionFunction,
         [FromForm] List<string> tagUsedInAction,
-        [FromForm] List<string> dataSetUsedInAction,
+        [FromForm] List<string> tagViaArgument,
+        [FromForm] List<string> valueViaArgument,
         [FromForm] string? newName = null)
     {
         await TransactionScopeHelper.ExecuteInTransactionAsync(new TransactionScopeHelperSettings(), async () =>
         {
-            await _actionService.UpdateAsync(caseName, actionName, actionFunction, tagUsedInAction, dataSetUsedInAction, newName);
+            await _actionService.UpdateAsync(caseName, actionName, actionFunction, tagUsedInAction, tagViaArgument, valueViaArgument, newName);
         });
         
         return NoContent();

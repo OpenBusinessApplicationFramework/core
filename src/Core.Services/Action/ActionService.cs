@@ -11,7 +11,7 @@ public class ActionService(IDbContextFactory<ApplicationDbContext> _dbContextFac
         return db.ActionDefinitions.Include(a => a.Case).Where(a => a.Case.Name == caseName).AsQueryable();
     }
 
-    public async Task CreateAsync(string caseName, string name, string actionFunction, List<string> tagUsedInAction, List<string> dataSetCategoryUsedInAction)
+    public async Task CreateAsync(string caseName, string name, string actionFunction, List<string> tagUsedInAction, List<string> tagViaArgument, List<string> valueViaArgument)
     {
         await using var db = await _dbContextFactory.CreateDbContextAsync();
 
@@ -20,14 +20,16 @@ public class ActionService(IDbContextFactory<ApplicationDbContext> _dbContextFac
             CaseId = (await db.Cases.SingleAsync(x => x.Name == caseName)).Id,
             Name = name,
             ActionFunction = actionFunction,
-            TagUsedInAction = tagUsedInAction
+            TagUsedInAction = tagUsedInAction,
+            TagViaArgument = tagViaArgument,
+            ValueViaArgument = valueViaArgument
         };
 
         db.ActionDefinitions.Add(actionDef);
         await db.SaveChangesAsync();
     }
 
-    public async Task<bool> UpdateAsync(string caseName, string name, string actionFunction, List<string> tagUsedInAction, List<string> dataSetCategoryUsedInAction, string? newName = null)
+    public async Task<bool> UpdateAsync(string caseName, string name, string actionFunction, List<string> tagUsedInAction, List<string> tagViaArgument, List<string> valueViaArgument, string? newName = null)
     {
         await using var db = await _dbContextFactory.CreateDbContextAsync();
 
@@ -35,11 +37,20 @@ public class ActionService(IDbContextFactory<ApplicationDbContext> _dbContextFac
         if (exists == null)
             return false;
 
+        if (actionFunction != null) 
+            exists.ActionFunction = actionFunction;
+
+        if (tagUsedInAction != null)
+            exists.TagUsedInAction = tagUsedInAction;
+
+        if (valueViaArgument != null)
+            exists.ValueViaArgument = valueViaArgument;
+
+        if (tagViaArgument != null)
+            exists.TagViaArgument = tagViaArgument;
+
         if (newName != null)
             exists.Name = newName;
-
-        exists.ActionFunction = actionFunction;
-        exists.TagUsedInAction = tagUsedInAction;
 
         db.Update(exists);
         await db.SaveChangesAsync();
