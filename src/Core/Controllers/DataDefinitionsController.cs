@@ -32,7 +32,6 @@ public class DataDefinitionsController(DataService _dataService, IDbContextFacto
         [FromForm] string? initialValue = null,
         [FromForm] Models.Data.ValueType valueType = Models.Data.ValueType.Static,
         [FromForm] string? actionForCalculated = null,
-        [FromForm] CalculateType? calculateType = null,
         [FromForm] ConnectionType? connectionType = null,
         [FromForm] string? pathForConnected = null)
     {
@@ -44,7 +43,6 @@ public class DataDefinitionsController(DataService _dataService, IDbContextFacto
             InitialValue = initialValue,
             ValueType = valueType,
             ActionForCalculated = actionForCalculated,
-            CalculateType = calculateType,
             ConnectionType = connectionType,
             PathForConnected = pathForConnected
         };
@@ -65,7 +63,6 @@ public class DataDefinitionsController(DataService _dataService, IDbContextFacto
         [FromForm] string? initialValue = null,
         [FromForm] Models.Data.ValueType valueType = Models.Data.ValueType.Static,
         [FromForm] string? actionForCalculated = null,
-        [FromForm] CalculateType? calculateType = null,
         [FromForm] ConnectionType? connectionType = null,
         [FromForm] string? pathForConnected = null)
     {
@@ -78,7 +75,6 @@ public class DataDefinitionsController(DataService _dataService, IDbContextFacto
             InitialValue = initialValue,
             ValueType = valueType,
             ActionForCalculated = actionForCalculated,
-            CalculateType = calculateType,
             ConnectionType = connectionType,
             PathForConnected = pathForConnected
         };

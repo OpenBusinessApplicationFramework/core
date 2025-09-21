@@ -8,7 +8,8 @@ The goal of this open source project is to make application development—especi
 - [Detailed Roadmap](#detailed-roadmap)
 - [Contributing](#contributing)
 - [Third-Party Licenses](#third-party-licenses)
-- [License](#license) 
+- [License](#license)
+- [Trademarks](#trademarks) 
 
 ## Development Status
 
@@ -36,7 +37,7 @@ This project is currently under active development. Please note the following:
 | API Completion (v1)                   | Q2 2025        | &#x2705; Done       |
 | GUI Alpha (Auto-GUI)                  | Q3 2025        | &#x2699; In Progress|
 | OIDC & Key Vault Integration          | Early Q4 2025  | &#x23F3; Upcoming   |
-| Admin tool (CLI)                      | -              | &#x274C; Cancled    |
+| Admin tool (CLI)                      | -              | &#x274C; Canceled   |
 | Admin GUI Manager                     | Q4 2025        | &#x23F3; Upcoming   |
 | Migration to .NET 10                  | Q4 2025        | &#x23F3; Upcoming   |
 | Public Beta & Feedback Round          | Late Q4 2025   | &#x23F3; Upcoming   |
@@ -85,4 +86,12 @@ This project includes the following third-party dependencies. Please review thei
 
 ## License
 
-This project is licensed under the **LGPL-2.1 license**. See [LICENSE](LICENSE) for details.
+This project is licensed under the **GPL-3.0 license**. See [LICENSE](LICENSE) for details.
+
+## Trademarks
+
+JavaScript is a trademark or registered trademark of Oracle America, Inc. in the U.S. and/or other countries.  
+Microsoft and .NET are trademarks of the Microsoft group of companies.  
+PostgreSQL is a registered trademark of the PostgreSQL Community Association of Canada.  
+
+All other product names, logos, and brands are the property of their respective owners. Use of these names, logos, and brands is for identification purposes only and does not imply endorsement or affiliation. This project is independent and is not affiliated with, endorsed, or sponsored by any of the above trademark holders.

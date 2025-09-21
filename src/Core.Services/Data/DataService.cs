@@ -49,7 +49,6 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         existing.InitialValue = updatedDefinition.InitialValue;
         existing.ValueType = updatedDefinition.ValueType;
         existing.ActionForCalculated = updatedDefinition.ActionForCalculated;
-        existing.CalculateType = updatedDefinition.CalculateType;
         existing.ConnectionType = updatedDefinition.ConnectionType;
         existing.PathForConnected = updatedDefinition.PathForConnected;
 
@@ -135,7 +134,7 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
             object parsed = result.DataDefinition.ValueType switch
             {
                 ValueType.Static => ParseValueInRightObject(result),
-                ValueType.Calculated => skipCalculated ? ParseValueInRightObject(result) : await HandleCalculatedAsync(result),
+                ValueType.Calculated => skipCalculated ? ParseValueInRightObject(result) : await HandleCalculatedAsync(result, getSubTagsFromTopTag),
                 ValueType.Connected => HandleConnected(await _dbContextFactory.CreateDbContextAsync(), result),
                 ValueType.UniqueIdentifier => ParseValueInRightObject(result),
                 ValueType.Select => ParseValueInRightObject(result),
@@ -210,9 +209,6 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
             entry.Value = new IdGenerator((int)(entry.Id & 0x3FF)).CreateId().ToString();
             await db.SaveChangesAsync();
         }
-
-        if (def.CalculateType == CalculateType.OnInsert && !string.IsNullOrWhiteSpace(def.ActionForCalculated))
-            await new ActionExecuteService(_dbContextFactory, this, _dataAnnotationService).ExecuteActionAsync(caseName, def.ActionForCalculated, entry.Id);
 
         return (entry.Id, ParseValueInRightObject(entry));
     }
@@ -294,9 +290,6 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         }
 
         await db.SaveChangesAsync();
-
-        if (def.CalculateType == CalculateType.OnInsert && !string.IsNullOrWhiteSpace(def.ActionForCalculated) && !skipCalculated)
-            await new ActionExecuteService(_dbContextFactory, this, _dataAnnotationService).ExecuteActionAsync(entry.Case.Name, def.ActionForCalculated, entry.Id);
     }
 
     public async Task DeleteDataEntryAsync(string caseName, long entryId)
@@ -309,12 +302,17 @@ public class DataService(IDbContextFactory<ApplicationDbContext> _dbContextFacto
         await db.SaveChangesAsync();
     }
 
-    private async Task<object> HandleCalculatedAsync(DataEntry entry)
+    private async Task<object> HandleCalculatedAsync(DataEntry entry, string? getSubTagsFromTopTag = null)
     {
         var def = entry.DataDefinition;
 
-        if (def.CalculateType == CalculateType.OnCall && !string.IsNullOrWhiteSpace(def.ActionForCalculated))
-            await new ActionExecuteService(_dbContextFactory, this, _dataAnnotationService).ExecuteActionAsync(entry.Case.Name, def.ActionForCalculated, entry.Id);
+        string? callingSubTagIfExsists = null;
+
+        if (!string.IsNullOrWhiteSpace(getSubTagsFromTopTag))
+            callingSubTagIfExsists = entry.Tags.SingleOrDefault(x => x.Name.StartsWith($"{getSubTagsFromTopTag}_"))?.Name ?? null;
+
+        if (!string.IsNullOrWhiteSpace(def.ActionForCalculated))
+            await new ActionExecuteService(_dbContextFactory, this, _dataAnnotationService).ExecuteActionAsync(entry.Case.Name, def.ActionForCalculated, entry.Id, callingSubTag: callingSubTagIfExsists);
 
         var newEntry = await (await _dbContextFactory.CreateDbContextAsync()).DataEntries.Include(e => e.Case).Include(e => e.DataDefinition).SingleAsync(x => x.Case.Name == entry.Case.Name && x.Id == entry.Id);
 

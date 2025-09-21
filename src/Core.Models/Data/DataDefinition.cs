@@ -13,7 +13,6 @@ public class DataDefinition : CommonDefinition
 
     // Use arithmetic formulas, get other values via tags
     public string? ActionForCalculated { get; set; }
-    public CalculateType? CalculateType { get; set; }
 
     // Import Data from other cases
     public ConnectionType? ConnectionType { get; set; }
@@ -25,7 +24,6 @@ public class DataDefinition : CommonDefinition
 
     public bool IsValid =>
         (ValueType == ValueType.Calculated
-            && CalculateType != null
             && !string.IsNullOrWhiteSpace(ActionForCalculated))
         || (ValueType == ValueType.Connected
             && ConnectionType != null

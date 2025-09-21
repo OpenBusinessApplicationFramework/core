@@ -2,8 +2,8 @@
 using Core.Models.Data;
 using Core.Services.Data;
 using Jint;
+using Microsoft.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
-using System.Linq;
 
 namespace Core.Services.Action;
 
@@ -30,7 +30,7 @@ public class ActionExecuteService(IDbContextFactory<ApplicationDbContext> _dbCon
             var entry = await db.DataEntries.Include(e => e.Case).Include(e => e.DataDefinition).SingleAsync(x => x.Case.Name == caseName && x.Id == entryIdToCalculate);
             engine.SetValue("CalculatedDataEntry", entry);
 
-            skipCalculatedAtEntriesLoad = entry.DataDefinition.CalculateType == CalculateType.OnCall;
+            skipCalculatedAtEntriesLoad = true;
         }
 
         if (arguments != null && arguments.Any())
@@ -56,7 +56,9 @@ public class ActionExecuteService(IDbContextFactory<ApplicationDbContext> _dbCon
                 allArgumentsFromTags.Add(argument);
             }
         }
-            
+
+        if (!string.IsNullOrWhiteSpace(callingSubTag))
+            allArgumentsFromTags.Add(callingSubTag);
 
         var allEntries = (await _dataService.GetDataEntriesAsync(db, caseName, null, allArgumentsFromTags.ToArray(), skipCalculated: skipCalculatedAtEntriesLoad)).results.ToList();
 
@@ -79,11 +81,15 @@ public class ActionExecuteService(IDbContextFactory<ApplicationDbContext> _dbCon
             var grouped = entriesByTag.GroupBy(e => e.DataDefinition.Name, StringComparer.OrdinalIgnoreCase);
 
             foreach (var grp in grouped)
-                engine.SetValue($"{tagName}_{grp.Key}", grp.ToList());
-        }
+            {
+                var realTagName = tagName;
 
-        if (!string.IsNullOrWhiteSpace(callingSubTag))
-            engine.SetValue("callingSubTag", callingSubTag);
+                if (realTagName == callingSubTag)
+                    realTagName = "callingSubTag";
+
+                engine.SetValue($"{realTagName}_{grp.Key}", grp.ToList());
+            }
+        }
 
         try
         {
