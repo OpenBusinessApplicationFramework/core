@@ -12,6 +12,7 @@ public class ApplicationDbContext : DbContext
     public DbSet<DataEntry> DataEntries { get; set; } = null!;
     public DbSet<Tag> Tags { get; set; } = null!;
     public DbSet<ActionDefinition> ActionDefinitions { get; set; } = null!;
+    public DbSet<MainMenuItem> MainMenuItems { get; set; } = null!;
 
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
     : base(options)
