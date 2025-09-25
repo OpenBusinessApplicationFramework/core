@@ -16,7 +16,7 @@ namespace Core.Controllers;
 public class CaseController(CommonService _commonService, IDbContextFactory<ApplicationDbContext> _dbContextFactory) : ControllerBase
 {
     [HttpGet("odata")]
-    public async Task<IActionResult> GetCaseAsync(ODataQueryOptions<ActionDefinition> queryOptions, [FromQuery] string name, [FromQuery] string description)
+    public async Task<IActionResult> GetCaseAsync(ODataQueryOptions<Case> queryOptions)
     {
         var db = await _dbContextFactory.CreateDbContextAsync();
 
@@ -61,10 +61,10 @@ public class CaseController(CommonService _commonService, IDbContextFactory<Appl
     }
 
     [HttpGet("{caseName}/mainmenu")]
-    public async Task<Dictionary<string, List<MainMenuItem>>> GetMainMenuItemAsync([FromRoute] string caseName)
+    public async Task<IActionResult> GetMainMenuItemAsync([FromRoute] string caseName)
     {
         var db = await _dbContextFactory.CreateDbContextAsync();
-        return await _commonService.GetMainMenuItem(db, caseName);
+        return Ok(await _commonService.GetMainMenuItem(db, caseName));
     }
 
     [HttpPost("{caseName}/mainmenu")]
